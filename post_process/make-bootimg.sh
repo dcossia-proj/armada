@@ -6,8 +6,7 @@ RAW="${1:-output/image/disk.raw}"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 MKBOOTIMG="${MKBOOTIMG:-${SCRIPT_DIR}/../vendor/mkbootimg/mkbootimg.py}"
 
-# AYN trio shares a board-id; first matching DTB wins.
-SUPPORTED_DTBS="qcs8550-ayaneo-pocketevo qcs8550-ayn-odin2portal qcs8550-ayn-odin2 qcs8550-ayn-odin2mini"
+SUPPORTED_DTBS="qcs8550-ayaneo-pocketevo qcs8550-ayn-odin2portal qcs8550-ayn-odin2 qcs8550-ayn-odin2mini qcs8550-retroidpocket-rp6 qcs8550-retroidpocket-rp6-top-dpad"
 
 [[ -f "${RAW}" ]] || { echo "raw image not found: ${RAW} (run a build first)"; exit 1; }
 

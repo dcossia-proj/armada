@@ -36,12 +36,12 @@ matches:
       sys_path: /sys/firmware/devicetree/base
       attributes:
         - name: model
-          value: Retroid Pocket 6
+          value: Retroid Pocket 6 (D-Pad Bottom)
   - udev:
       sys_path: /sys/firmware/devicetree/base
       attributes:
         - name: model
-          value: Retroid Pocket 6 TOP-DPAD
+          value: Retroid Pocket 6 (D-Pad Top)
 
 # Only allow a single source device per composite device of this type.
 single_source: false
