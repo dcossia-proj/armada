@@ -1,0 +1,63 @@
+#!/bin/bash
+# Power button + clamshell lid -> fake suspend. Watches the power key and, on
+# clamshell devices, the lid switch; dispatches both through one handler.
+set -uo pipefail
+LOG_TAG="armada-power-switch"
+log() { logger -t "$LOG_TAG" -- "$*"; }
+source /usr/lib/armada/input-lib
+
+dev_is_power() {
+    local name
+    name="$(cat "/sys/class/input/$(basename "$1")/device/name" 2>/dev/null)" || return 1
+    case "$name" in *pwrkey*|*[Pp]ower\ [Bb]utton*) return 0 ;; esac
+    return 1
+}
+
+# First power device, plus the lid switch when present (deduped if the same node).
+devices_of_interest() {
+    local dev power="" lid=""
+    for dev in /dev/input/event*; do
+        [[ -e "$dev" ]] || continue
+        [[ -z "$power" ]] && dev_is_power "$dev" && power="$dev"
+        [[ -z "$lid" ]] && armada_dev_has_lid "$dev" && lid="$dev"
+    done
+    [[ -n "$power" ]] && echo "$power"
+    [[ -n "$lid" && "$lid" != "$power" ]] && echo "$lid"
+}
+
+handle() {
+    local line
+    while read -r line; do
+        case "$line" in
+            *"(KEY_POWER), value 1"*)
+                if armada_lid_closed; then
+                    log "power pressed but lid closed -> ignored"
+                else
+                    log "power -> toggle fake suspend"
+                    /usr/libexec/armada/fake-suspend toggle || true
+                fi ;;
+            *"(SW_LID), value 1"*)
+                log "lid closed -> suspend"
+                /usr/libexec/armada/fake-suspend sleep || true ;;
+            *"(SW_LID), value 0"*)
+                log "lid open -> resume"
+                /usr/libexec/armada/fake-suspend wake || true ;;
+        esac
+    done
+}
+
+while true; do
+    pids=()
+    while read -r dev; do
+        evtest "$dev" 2>/dev/null | handle &
+        pids+=($!)
+        log "watching $dev"
+    done < <(devices_of_interest)
+
+    [[ ${#pids[@]} -gt 0 ]] || { sleep 2; continue; }
+    # Any watcher exiting (device re-enumerated, evtest died) -> tear down and rescan.
+    wait -n
+    kill "${pids[@]}" 2>/dev/null || true
+    wait 2>/dev/null || true
+    sleep 1
+done

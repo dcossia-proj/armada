@@ -3,11 +3,13 @@ set -euo pipefail
 
 eval "$(/usr/libexec/armada/device-env)"
 
-pocket_evo_xbox_mode() {
+# AYANEO Pocket MCUs need this serial frame to switch to fake-Xbox-360 mode
+# (045e:028e); without it the kernel can't drive the controller.
+ayaneo_xbox_mode() {
     local serial_device=/dev/ttyHS0
 
     if [[ ! -e "$serial_device" ]]; then
-        echo "device-quirks: $serial_device not present, skipping Pocket EVO Xbox mode"
+        echo "device-quirks: $serial_device not present, skipping AYANEO Xbox mode"
         return 0
     fi
 
@@ -17,12 +19,12 @@ pocket_evo_xbox_mode() {
     printf '\x35\x35\x30\x35\x30\x31\x30\x30\x30\x30\x30\x30\x30\x30\x30\x30' >"$serial_device"
     sleep 0.1
 
-    echo "device-quirks: Pocket EVO MCU switched to Xbox 360 mode"
+    echo "device-quirks: AYANEO MCU switched to Xbox 360 mode"
 }
 
 case "${ARMADA_GAMEPAD_QUIRK:-none}" in
-    pocket-evo-xbox)
-        pocket_evo_xbox_mode
+    ayaneo-xbox)
+        ayaneo_xbox_mode
         ;;
     none)
         ;;

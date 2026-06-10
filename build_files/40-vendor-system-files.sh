@@ -19,7 +19,7 @@ systemctl enable armada-device-quirks.service
 systemctl enable armada-perf-paths.service
 systemctl enable armada-steamapps.service
 systemctl enable armada-game-watch.service
-systemctl enable armada-powerkey.service
+systemctl enable armada-power-switch.service
 systemctl enable armada-bootimg-sync.service
 
 # Updates are manual (Steam UI / steamos-update). The base image enables this

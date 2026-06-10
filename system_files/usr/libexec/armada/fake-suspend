@@ -7,6 +7,7 @@ SAVE_DIR="/run/armada/fake-suspend"
 LOG_TAG="armada-fake-suspend"
 
 log() { logger -t "$LOG_TAG" -- "$*"; echo "$LOG_TAG: $*" >&2; }
+source /usr/lib/armada/input-lib
 
 SESSION_USER="${ARMADA_SESSION_USER:-armada}"
 SESSION_UID="$(id -u "$SESSION_USER" 2>/dev/null || echo 1000)"
@@ -75,6 +76,8 @@ block_input() {
     local dev name
     for dev in /dev/input/event*; do
         [[ -e "$dev" ]] || continue
+        # Never grab the lid switch — resume-on-open needs its events to flow.
+        armada_dev_has_lid "$dev" && continue
         name="$(cat "/sys/class/input/$(basename "$dev")/device/name" 2>/dev/null)" || continue
         echo "$name" | grep -qE "^(${INPUT_WHITELIST})$" && continue
         evtest --grab "$dev" >/dev/null 2>&1 &

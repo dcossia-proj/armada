@@ -1,0 +1,11 @@
+[Unit]
+Description=armada power-button + lid watcher (fake suspend)
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/libexec/armada/power-switch-watch
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
