@@ -1,8 +1,17 @@
 #!/bin/bash
 set -uo pipefail
+
+game_running() {
+    local pid
+    for pid in $(pgrep -x reaper 2>/dev/null); do
+        grep -qa SteamLaunch "/proc/$pid/cmdline" 2>/dev/null && return 0
+    done
+    return 1
+}
+
 prev=""
 while :; do
-    if pgrep -f 'reaper SteamLaunch AppId=' >/dev/null 2>&1; then
+    if game_running; then
         state=game
     else
         state=balanced
