@@ -14,7 +14,7 @@ Includes:
 > [!WARNING]
 > **Prototype software. Use at your own risk.** Armada is under active
 > development and is not stable. Booting it requires flashing an ABL which
-> could brick your device if done incorrectly.
+> could brick your device or corrupt your Android partition.
 >
 > **Over-the-air updates are experimental.** Armada can now update itself in
 > place (see [Updating](#updating)) instead of reflashing, but the update path
@@ -36,11 +36,11 @@ Includes:
 | AYN Odin 2 Mini | SM8550 | ✅ Supported and tested |
 | AYN Odin 2 | SM8550 | ✅ Supported and tested |
 | AYN Thor | SM8550 | ✅ Supported and tested |
-| Retroid Pocket 6 | SM8550 | ⚠️ Untested try at own risk |
-| AYANEO Pocket ACE | SM8550 | ⚠️ Untested try at own risk |
-| AYANEO Pocket DMG | SM8550 | ⚠️ Untested try at own risk |
-| AYANEO Pocket DS | SM8550 | ⚠️ Untested try at own risk |
-| AYANEO Pocket S 2K | SM8550 | ⚠️ Untested try at own risk |
+| Retroid Pocket 6 | SM8550 | ⚠️ Untested install at own risk |
+| AYANEO Pocket ACE | SM8550 | ⚠️ Untested install at own risk |
+| AYANEO Pocket DMG | SM8550 | ⚠️ Untested install at own risk |
+| AYANEO Pocket DS | SM8550 | ⚠️ Untested install at own risk |
+| AYANEO Pocket S 2K | SM8550 | ⚠️ Untested install at own risk |
 
 ## Install
 
@@ -54,20 +54,29 @@ development.
 
 2. Flash the ROCKNIX ABL for your device.
 
-   Insert the SD card and boot into Android. Copy the `rocknix_abl` folder to
-   the root of your internal storage. Run `backup_abl.sh` as root followed by
-   `flash_abl.sh` as root.
+   - Insert the SD card, boot into Android, and copy the `rocknix_abl` folder to
+     the root of your internal storage.
+   - Identify your SoC from the device table above (`SM8550`, `SM8650`, or
+     `SM8750`). Flashing the wrong SoC's ABL can brick the device, so match it
+     carefully.
+   - Using your device's built-in "run script as root" tool, browse to your SoC's 
+     subfolder (e.g. `rocknix_abl/SM8550`) and run `backup_abl.sh`.
+   - Copy the backup (`abl_a.img` and `abl_b.img`, written into your SoC subfolder)
+     to your PC for safekeeping.
+   - Run `flash_abl.sh` the same way to flash the new ABL.
 
-3. Boot from SD and set your device model.
+3. Boot from SD and set your device model and boot mode.
 
-   Reboot and hold volume down while powering on the device with the SD card
-   inserted. Navigate the menus to set your device model and switch boot mode
-   to Linux. Choose Start to boot your device.
+   - Reboot holding VOL- to enter the ABL menu.
+   - In the ABL menu (navigate with VOL-/+, select with POWER):
+     - Set your device model
+     - Toggle boot mode to Linux
+     - Choose Start to exit
 
 4. Wait for Steam first-run setup.
 
    After the intro animation, the display may be black for up to 60 seconds
-   before Steam appears. This is expected on the current SD-card boot path.
+   before Steam appears. This is expected on the current SD card boot path.
    Eventually you will see Steam first-run where you can configure your 
    language, timezone, and Wi-Fi. At the end Steam will restart again, and 
    you may see another 60 seconds of black before the login screen appears.
@@ -95,6 +104,8 @@ image-based with rollback, so a failed boot falls back to the previous image.
   not real S3 sleep, so idle battery drain is higher than it should be.
 - **Black screen during Steam launch.** Sometimes there is a 30-60s black screen 
   before Steam becomes fully visible, often following an update or restart.
+- **Red tint.** Some devices show a red tint on the panel after Steam 
+  restart. It is intermittent and a reboot clears it.
 - **Steam Machine onboarding.** Sometimes you see the Steam Machine onboarding
   before choosing your language. Tap through it to continue.
 - **QAM is unmapped on Ayaneo devices.** Use Home+A to open the Quick Access Menu.
