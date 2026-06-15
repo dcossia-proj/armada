@@ -40,13 +40,13 @@ sudo mkdir -p "${WORK}/mnt/rocknix_abl"
 # One image serves all devices, so stage a self-contained folder per SoC.
 # vfat has no Unix ownership, so `cp -a` would error on chown under set -e.
 ABL_SRC=$(ls -d "${WORK}/abl-extracted"/rocknix-abl-*)
-sudo cp "${REPO_ROOT}/vendor/rocknix_abl/README" "${WORK}/mnt/rocknix_abl/README"
+sudo cp "${REPO_ROOT}/abl/README" "${WORK}/mnt/rocknix_abl/README"
 for soc in SM8550 SM8650 SM8750; do
     d="${WORK}/mnt/rocknix_abl/${soc}"
     sudo mkdir -p "$d"
     sudo cp "${ABL_SRC}/abl_signed-${soc}.elf" "${ABL_SRC}/abl_signed-${soc}.elf.sha256" "$d/"
     for s in flash_abl backup_abl restore_backup_abl; do
-        sed "s/%DEVICE%/${soc}/g" "${REPO_ROOT}/vendor/rocknix_abl/${s}.sh.template" \
+        sed "s/%DEVICE%/${soc}/g" "${REPO_ROOT}/abl/${s}.sh.template" \
             | sudo tee "$d/${s}.sh" >/dev/null
     done
     sudo chmod 0755 "$d"/*.sh

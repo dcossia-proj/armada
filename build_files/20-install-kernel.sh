@@ -2,15 +2,15 @@
 set -euxo pipefail
 
 KVER="7.0.11"
-TARBALL="/ctx/vendor/kernel/armada-kernel-${KVER}.tar.zst"
-EXPECTED_SHA256="613f0f7cbf08ad3122999947a1f4774f0c15d3eb8fcd6361ea0fbe0f8470f062"
+TARBALL="/packages/kernel/armada-kernel-${KVER}.tar.zst"
 
 # bootc expects exactly one kernel under /usr/lib/modules.
 dnf5 -y remove kernel kernel-core kernel-modules kernel-modules-core 2>/dev/null || true
 rm -rf /usr/lib/modules/*
 
+# Verify the shipped checksum.
 [ -f "${TARBALL}" ] || { echo "ERROR: kernel tarball missing at ${TARBALL}"; exit 1; }
-echo "${EXPECTED_SHA256}  ${TARBALL}" | sha256sum -c -
+( cd /packages/kernel && sha256sum -c "armada-kernel-${KVER}.tar.zst.sha256" )
 
 tar --extract --zstd -f "${TARBALL}" -C /usr/
 depmod -a "${KVER}" -b /

@@ -4,7 +4,7 @@ set -euxo pipefail
 
 RAW="${1:-output/image/disk.raw}"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-MKBOOTIMG="${MKBOOTIMG:-${SCRIPT_DIR}/../vendor/mkbootimg/mkbootimg.py}"
+MKBOOTIMG="${MKBOOTIMG:-}"
 
 # Single sources shared with the on-device regen (armada-bootimg-update).
 ARMADA_LIB="${SCRIPT_DIR}/../system_files/usr/lib/armada"
@@ -21,6 +21,12 @@ LOOP=$(sudo losetup -fP --show "${RAW}")
 trap 'sudo umount "${WORK}/p1" 2>/dev/null||true; sudo umount "${WORK}/p2" 2>/dev/null||true; sudo losetup -d "${LOOP}" 2>/dev/null||true; rm -rf "${WORK}"' EXIT
 
 mkdir -p "${WORK}/p1" "${WORK}/p2"
+
+if [[ -z "${MKBOOTIMG}" ]]; then
+    bash "${SCRIPT_DIR}/../build_files/fetch-mkbootimg.sh" "${WORK}/mkb"
+    MKBOOTIMG="${WORK}/mkb/mkbootimg.py"
+fi
+
 sudo mount "${LOOP}p2" "${WORK}/p2"          # /boot
 
 DEPLOY=$(sudo ls "${WORK}/p2/ostree" | grep '^default-' | head -1)

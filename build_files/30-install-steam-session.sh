@@ -2,10 +2,10 @@
 set -euxo pipefail
 
 # Patched Turnip includes the Mesa #14656 VM_BIND fix.
-dnf5 -y install --setopt=install_weak_deps=False /ctx/vendor/mesa/mesa-*.fc44.armada.*.rpm
+dnf5 -y install --setopt=install_weak_deps=False /packages/mesa/mesa-*.fc44.armada.*.rpm
 
 # Patched mangohud: Adreno GPU load/clock/temp for mainline drm/msm (msm_dpu).
-dnf5 -y install --setopt=install_weak_deps=False /ctx/vendor/mangohud/mangohud-*.fc44.armada.*.rpm
+dnf5 -y install --setopt=install_weak_deps=False /packages/mangohud/mangohud-*.fc44.armada.*.rpm
 
 dnf5 -y install --setopt=install_weak_deps=False \
     gamescope \
@@ -18,7 +18,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     xorg-x11-server-Xvfb
 
 # armada-gamescope carries ROCKNIX's --use-rotation-shader patch.
-dnf5 -y install --setopt=install_weak_deps=False /ctx/vendor/gamescope/gamescope-[0-9]*.aarch64.rpm
+dnf5 -y install --setopt=install_weak_deps=False /packages/gamescope/gamescope-[0-9]*.aarch64.rpm
 
 # Avoid gamescope-session-ogui-steam/-powerstation; Terra's aarch64 deps are broken.
 dnf5 -y install --setopt=install_weak_deps=False --enable-repo=terra \
@@ -51,7 +51,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     erofs-utils \
     squashfuse \
     squashfs-tools
-dnf5 -y install --setopt=install_weak_deps=False /ctx/vendor/fex/fex-emu-*.rpm
+dnf5 -y install --setopt=install_weak_deps=False /packages/fex/fex-emu-*.rpm
 
 # /usr/share config stays user-overridable; ~/.fex-emu would mask it.
 mkdir -p /usr/share/fex-emu

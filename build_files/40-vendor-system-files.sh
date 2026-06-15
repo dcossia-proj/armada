@@ -2,10 +2,12 @@
 set -euxo pipefail
 
 cp -a /ctx/system_files/. /
-install -Dpm 0755 /ctx/vendor/inputplumber/inputplumber /usr/bin/inputplumber
-install -Dpm 0755 /ctx/vendor/mkbootimg/mkbootimg.py /usr/libexec/armada/mkbootimg.py
-install -Dpm 0755 /ctx/vendor/mkbootimg/gki/generate_gki_certificate.py /usr/libexec/armada/gki/generate_gki_certificate.py
-install -Dpm 0755 /ctx/vendor/extest/libextest.so /usr/lib/extest/libextest.so
+install -Dpm 0755 /packages/inputplumber/inputplumber /usr/bin/inputplumber
+install -Dpm 0755 /packages/extest/libextest.so /usr/lib/extest/libextest.so
+
+# shipped so armada-bootimg-update can rebuild /KERNEL on-device after an OTA
+bash /ctx/build_files/fetch-mkbootimg.sh /usr/libexec/armada
+chmod 0755 /usr/libexec/armada/mkbootimg.py /usr/libexec/armada/gki/generate_gki_certificate.py
 
 chmod 0755 /usr/libexec/armada/*
 chmod 0755 /usr/libexec/os-session-select
