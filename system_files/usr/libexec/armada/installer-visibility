@@ -1,0 +1,15 @@
+#!/bin/bash
+set -euo pipefail
+
+eval "$(/usr/libexec/armada/device-env)"
+
+# The internal-storage installer can only target a disk it isn't booted from,
+# so its KDE entry (TryExec=/run/armada/installable) is shown only on an SD
+# boot. The marker lives in tmpfs, so it's absent by default → hidden on internal.
+dev="${ARMADA_INTERNAL_DEVICE:-/dev/sda}"
+src=$(findmnt -no SOURCE /sysroot 2>/dev/null || findmnt -no SOURCE /)
+src=$(readlink -f "$src" 2>/dev/null || echo "$src")
+case "$src" in
+    "$dev"*) exit 0 ;;
+esac
+install -m 0755 /dev/null /run/armada/installable

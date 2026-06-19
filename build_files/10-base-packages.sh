@@ -46,6 +46,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     plymouth-theme-spinner \
     qt6-qttools \
     qt6-qtvirtualkeyboard \
+    zenity \
     seatd
 
 dnf5 -y install --setopt=install_weak_deps=False \
