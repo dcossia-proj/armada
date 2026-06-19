@@ -1,0 +1,10 @@
+[Unit]
+Description=Armada Fake Suspend
+Documentation=man:systemd-suspend.service(8)
+DefaultDependencies=no
+Requires=sleep.target
+After=sleep.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/armada/fake-suspend sleep
