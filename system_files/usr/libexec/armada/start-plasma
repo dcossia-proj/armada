@@ -6,9 +6,4 @@ export XDG_CURRENT_DESKTOP=KDE
 export XDG_SESSION_DESKTOP=KDE
 export XDG_SESSION_TYPE=wayland
 
-if [[ -e /run/armada-desktop-oneshot ]]; then
-    rm -f /run/armada-desktop-oneshot
-    sudo -n /usr/libexec/armada/session-control default-gamemode
-fi
-
 exec /usr/bin/startplasma-wayland

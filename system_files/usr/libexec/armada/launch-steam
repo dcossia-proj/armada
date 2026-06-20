@@ -5,10 +5,6 @@ steam_args=()
 if [[ ${1:-} == "--desktop" ]]; then
     shift
     steam_args=(-steamdeck)
-
-    if [[ ${XDG_SESSION_TYPE:-} == wayland && -r /usr/lib/extest/libextest.so ]]; then
-        export LD_PRELOAD="/usr/lib/extest/libextest.so${LD_PRELOAD:+:${LD_PRELOAD}}"
-    fi
 fi
 
 steam_root="${STEAM_ROOT:-${HOME}/.local/share/Steam}"
