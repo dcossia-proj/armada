@@ -5,6 +5,7 @@ ARG GAMESCOPE_PKG=ghcr.io/virtudude/armada-packages/gamescope@sha256:d2e4f3125e1
 ARG KERNEL_PKG=ghcr.io/virtudude/armada-packages/kernel@sha256:6035eae3c84c0a3dbffc3a1aabd5a9cf78d88c70612c933bb5990ade85a906dc
 ARG INPUTPLUMBER_PKG=ghcr.io/virtudude/armada-packages/inputplumber@sha256:1df4f9fc74dbb41c7ebe33bb6934745a4ab01c002178ae2bd34e7e99cebafd35
 ARG EXTEST_PKG=ghcr.io/virtudude/armada-packages/extest@sha256:3b0d047706d5f3398972d433f0b76f6f2d953bf52383a428857ede13cc16a109
+ARG NETWORKMANAGER_PKG=ghcr.io/virtudude/armada-packages/networkmanager@sha256:f9b05673dc312d28660ac89e3bf268bd756a8f000dafa7c950f5dd5da22d5b80
 
 FROM ${FEX_PKG} AS fex
 FROM ${MESA_PKG} AS mesa
@@ -12,6 +13,7 @@ FROM ${MANGOHUD_PKG} AS mangohud
 FROM ${GAMESCOPE_PKG} AS gamescope
 FROM ${KERNEL_PKG} AS kernel
 FROM ${INPUTPLUMBER_PKG} AS inputplumber
+FROM ${NETWORKMANAGER_PKG} AS networkmanager
 FROM ${EXTEST_PKG} AS extest
 
 FROM docker.io/library/node:22-slim AS decky-build
@@ -35,6 +37,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=gamescope,source=/rpms,target=/packages/gamescope \
     --mount=type=bind,from=kernel,source=/kernel,target=/packages/kernel \
     --mount=type=bind,from=inputplumber,source=/rpms,target=/packages/inputplumber \
+    --mount=type=bind,from=networkmanager,source=/rpms,target=/packages/networkmanager \
     --mount=type=bind,from=extest,source=/,target=/packages/extest \
     --mount=type=bind,from=decky-build,source=/build/dist,target=/packages/decky-dist \
     --mount=type=cache,dst=/var/cache \

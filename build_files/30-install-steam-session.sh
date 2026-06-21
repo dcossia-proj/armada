@@ -23,6 +23,9 @@ dnf5 -y install --setopt=install_weak_deps=False /packages/gamescope/gamescope-[
 # Patched InputPlumber: dpad signed-axis fix
 dnf5 -y install --setopt=install_weak_deps=False /packages/inputplumber/inputplumber-*.rpm
 
+# Patched NetworkManager: /etc/NetworkManager/ignore-sleep keeps wifi up across fake-suspend.
+dnf5 -y install --setopt=install_weak_deps=False /packages/networkmanager/*.rpm
+
 # Avoid gamescope-session-ogui-steam/-powerstation; Terra's aarch64 deps are broken.
 dnf5 -y install --setopt=install_weak_deps=False --enable-repo=terra \
     gamescope-session \
