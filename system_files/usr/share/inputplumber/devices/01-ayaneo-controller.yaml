@@ -56,5 +56,5 @@ options:
 
 # The target input device(s) to emulate by default
 target_devices:
-  - deck-uhid
+  - xb360
   - keyboard
