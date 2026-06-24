@@ -184,7 +184,7 @@ class ArmadaPower:
         self.smoothed_temp = 0.0
         self.last_pwm = 0
         self.suspended = False
-        self.suspend_fan_running = False
+        self.suspend_fan_active = False
         self.suspend_save = {}
         self.connection = None
         self.load_config()
@@ -499,7 +499,7 @@ class ArmadaPower:
         if self.suspend_save:
             return
         self.suspended = True
-        self.suspend_fan_running = False
+        self.suspend_fan_active = False
         self.suspend_save = {"cpu": [], "gpu": {}}
         for policy in self.cpu_policies:
             freqs = self.cpu_available_freqs(policy)
@@ -526,7 +526,7 @@ class ArmadaPower:
 
     def resume(self):
         self.suspended = False
-        self.suspend_fan_running = False
+        self.suspend_fan_active = False
         self.smoothed_temp = 0.0
         if not self.suspend_save:
             self.apply_profile()
@@ -607,15 +607,15 @@ class ArmadaPower:
         if not temp:
             return config["fan_safe_pwm"]
         if temp >= config["fan_safe_above"]:
-            self.suspend_fan_running = True
+            self.suspend_fan_active = True
             return config["fan_safe_pwm"]
-        if self.suspend_fan_running:
+        if self.suspend_fan_active:
             if temp <= config["fan_off_below"]:
-                self.suspend_fan_running = False
+                self.suspend_fan_active = False
                 return 0
             return config["fan_low_pwm"]
         if temp >= config["fan_on_above"]:
-            self.suspend_fan_running = True
+            self.suspend_fan_active = True
             return config["fan_low_pwm"]
         return 0
 

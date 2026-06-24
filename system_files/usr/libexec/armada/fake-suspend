@@ -58,13 +58,13 @@ radio_soft_blocked() {
 suspend_radios() {
     command -v rfkill >/dev/null 2>&1 || return 0
 
-    : > "$SAVE_DIR/radios-unblock-on-resume"
+    : > "$SAVE_DIR/radios"
     local kind
     for kind in wifi bluetooth; do
         rfkill list "$kind" >/dev/null 2>&1 || continue
         radio_soft_blocked "$kind" && continue
         if rfkill block "$kind"; then
-            printf '%s\n' "$kind" >> "$SAVE_DIR/radios-unblock-on-resume"
+            printf '%s\n' "$kind" >> "$SAVE_DIR/radios"
         else
             log "failed to block ${kind}"
         fi
@@ -72,13 +72,13 @@ suspend_radios() {
 }
 
 resume_radios() {
-    [[ -r "$SAVE_DIR/radios-unblock-on-resume" ]] || return 0
+    [[ -r "$SAVE_DIR/radios" ]] || return 0
 
     local kind
     while IFS= read -r kind; do
         [[ -n "$kind" ]] || continue
         rfkill unblock "$kind" || log "failed to restore ${kind}"
-    done < "$SAVE_DIR/radios-unblock-on-resume"
+    done < "$SAVE_DIR/radios"
 }
 
 runtime_pm_devices() {
@@ -91,14 +91,14 @@ runtime_pm_devices() {
 }
 
 suspend_runtime_pm() {
-    : > "$SAVE_DIR/runtime-pm"
+    : > "$SAVE_DIR/power-controls"
 
     local dev control previous count=0
     while IFS= read -r dev; do
         control="${dev}/power/control"
         [[ -w "$control" ]] || continue
         previous="$(cat "$control" 2>/dev/null)" || continue
-        printf '%s\t%s\n' "$control" "$previous" >> "$SAVE_DIR/runtime-pm"
+        printf '%s\t%s\n' "$control" "$previous" >> "$SAVE_DIR/power-controls"
         if echo auto > "$control" 2>/dev/null; then
             count=$((count + 1))
         else
@@ -110,14 +110,14 @@ suspend_runtime_pm() {
 }
 
 resume_runtime_pm() {
-    [[ -r "$SAVE_DIR/runtime-pm" ]] || return 0
+    [[ -r "$SAVE_DIR/power-controls" ]] || return 0
 
     local control previous
     while IFS=$'\t' read -r control previous; do
         [[ -w "$control" ]] || continue
         echo "$previous" > "$control" 2>/dev/null ||
             log "failed to restore ${control}=${previous}"
-    done < <(tac "$SAVE_DIR/runtime-pm")
+    done < <(tac "$SAVE_DIR/power-controls")
 }
 
 # The power key is left ungrabbed by block_input; wait_for_wake grabs it instead.
@@ -198,32 +198,34 @@ session_procs_file() {
 freeze_processes() {
     local procs p c
 
+    # fake-suspend and armada-powerd run as system services, outside user.slice.
     if systemctl freeze user.slice; then
-        touch "$SAVE_DIR/user-slice-frozen"
+        touch "$SAVE_DIR/user-slice"
         log "froze user.slice"
         return
     fi
 
+    log "failed to freeze user.slice; falling back to process freezer"
     procs="$(session_procs_file)" || { log "no session cgroup; skipping freeze"; return; }
     [[ -r "$procs" ]] || { log "session procs unreadable; skipping freeze"; return; }
-    : > "$SAVE_DIR/frozen"
+    : > "$SAVE_DIR/processes"
     for p in $(cat "$procs"); do
         [[ "$p" == "$$" ]] && continue
         c="$(cat "/proc/${p}/comm" 2>/dev/null)" || continue
         echo "$c" | grep -qE "^(${SESSION_KEEP_COMMS})$" && continue
-        kill -STOP "$p" 2>/dev/null && echo "$p" >> "$SAVE_DIR/frozen"
+        kill -STOP "$p" 2>/dev/null && echo "$p" >> "$SAVE_DIR/processes"
     done
-    log "froze $(wc -l < "$SAVE_DIR/frozen" 2>/dev/null || echo 0) processes"
+    log "froze $(wc -l < "$SAVE_DIR/processes" 2>/dev/null || echo 0) processes"
 }
 unfreeze_processes() {
-    if [[ -f "$SAVE_DIR/user-slice-frozen" ]]; then
+    if [[ -f "$SAVE_DIR/user-slice" ]]; then
         systemctl thaw user.slice || log "failed to thaw user.slice"
-        rm -f "$SAVE_DIR/user-slice-frozen"
+        rm -f "$SAVE_DIR/user-slice"
         return
     fi
 
-    if [[ -f "$SAVE_DIR/frozen" ]]; then
-        local p; for p in $(cat "$SAVE_DIR/frozen"); do kill -CONT "$p" 2>/dev/null || true; done
+    if [[ -f "$SAVE_DIR/processes" ]]; then
+        local p; for p in $(cat "$SAVE_DIR/processes"); do kill -CONT "$p" 2>/dev/null || true; done
     fi
     kill -CONT -1 2>/dev/null || true
 }
