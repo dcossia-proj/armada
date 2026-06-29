@@ -40,20 +40,12 @@ Includes:
 | AYN Thor | SM8550 | ✅ Tested |
 | AYN Odin 3 | SM8750 | ✅ Tested |
 | Retroid Pocket 6 | SM8550 | ✅ Tested |
+| KONKR Pocket FIT (G3 Gen 3) | SM8650 | ✅ Tested |
+| AYANEO Pocket S2 | SM8650 | ⚪ Untested |
 | AYANEO Pocket ACE | SM8550 | ⚪ Untested |
 | AYANEO Pocket DMG | SM8550 | ⚪ Untested |
 | AYANEO Pocket DS | SM8550 | ⚪ Untested |
 | AYANEO Pocket S 2K | SM8550 | ⚪ Untested |
-
-The following devices are supported but their SoC has not been
-thoroughly tested on Armada. There is a higher chance of brick
-or Android data partition corruption on these devices until further
-testing has been completed.
-
-| Device | SoC | Status |
-|---|---|---|
-| KONKR Pocket FIT (G3 Gen 3) | SM8650 | ⚠️ Untested install at own risk |
-| AYANEO Pocket S2 | SM8650 | ⚠️ Untested install at own risk |
 
 ## Flash to SD card
 
