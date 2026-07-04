@@ -1,9 +1,10 @@
 import { call } from "@decky/api";
-import type { CalibrationState, Capture, Config, PowerConfig, Tweaks } from "./types";
+import type { CalibrationState, Capture, Config, PowerConfig, RgbConfig, Tweaks } from "./types";
 
 export const getConfig = () => call<[], Config>("get_config");
 export const savePowerConfig = (data: PowerConfig) => call<[PowerConfig], Config>("save_power_config", data);
 export const saveTweaks = (data: Tweaks) => call<[Tweaks], Config>("save_tweaks", data);
+export const saveRgb = (data: RgbConfig) => call<[RgbConfig], Config>("save_rgb", data);
 export const setSshEnabled = (enabled: boolean) => call<[boolean], boolean>("set_ssh_enabled", enabled);
 export const setControllerType = (value: string) => call<[string], string>("set_controller_type", value);
 export const getControllerState = () => call<[], CalibrationState>("get_controller_state");

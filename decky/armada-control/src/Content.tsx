@@ -1,7 +1,7 @@
 import { Field, PanelSection, Tabs } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { getConfig, savePowerConfig, saveTweaks } from "./backend";
+import { getConfig, savePowerConfig, saveTweaks, saveRgb } from "./backend";
 import { useDebouncedSave } from "./hooks/useDebouncedSave";
 import { tabIcons } from "./icons";
 import { currentGame } from "./lib/games";
@@ -9,6 +9,7 @@ import { styles } from "./styles";
 import { Compatibility } from "./tabs/Compatibility";
 import { Power } from "./tabs/Power";
 import { Settings } from "./tabs/Settings";
+import { Rgb } from "./tabs/Rgb";
 import type { Config } from "./types";
 
 export function Content() {
@@ -17,6 +18,7 @@ export function Content() {
   const [message, setMessage] = useState("Loading");
   const savedPowerSnapshot = useRef("");
   const savedTweaksSnapshot = useRef("");
+  const savedRgbSnapshot = useRef("");
   const load = useCallback(async () => {
     try {
       const next = await getConfig();
@@ -24,6 +26,7 @@ export function Content() {
       next.selectedGame = next.game || null;
       savedPowerSnapshot.current = JSON.stringify(next.power);
       savedTweaksSnapshot.current = JSON.stringify(next.tweaks);
+      savedRgbSnapshot.current = JSON.stringify(next.rgb);
       setConfig(next);
     } catch (error) {
       setMessage(String(error));
@@ -60,6 +63,7 @@ export function Content() {
   }, [!!config]);
   useDebouncedSave({ config, field: "power", snapshot: savedPowerSnapshot, save: savePowerConfig, setConfig, onError: load });
   useDebouncedSave({ config, field: "tweaks", snapshot: savedTweaksSnapshot, save: saveTweaks, setConfig, onError: load });
+  useDebouncedSave({ config, field: "rgb", snapshot: savedRgbSnapshot, save: saveRgb, setConfig, onError: load });
   if (!config) return <PanelSection title="Armada Control"><Field label={message} /></PanelSection>;
   const tabContent = (content: ReactNode) => (
     <div className="armada-control-tab-content">{content}</div>
@@ -73,6 +77,7 @@ export function Content() {
         tabs={[
           { id: "Compatibility", title: tabIcons.Compatibility, content: tabContent(<Compatibility config={config} setConfig={setConfig} />) },
           { id: "Power", title: tabIcons.Power, content: tabContent(<Power config={config} setConfig={setConfig} />) },
+          { id: "Rgb", title: tabIcons.Rgb, content: tabContent(<Rgb config={config} setConfig={setConfig} />) },
           { id: "Advanced", title: tabIcons.Advanced, content: tabContent(<Settings config={config} setConfig={setConfig} />) },
         ]}
       />
