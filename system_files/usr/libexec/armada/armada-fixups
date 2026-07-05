@@ -14,6 +14,20 @@ PROTON_11_VERSIONED = re.compile(r"proton-cachyos-11\.0-[^\"\s]+-arm64")
 # Keep this in sync with PROTON_TOOL_NAME when changing Proton major/minor lines.
 PROTON_11_STABLE = "proton-cachyos-11.0-arm64"
 
+FIXUP_STATE_DIR = pathlib.Path("/var/lib/armada/fixups")
+
+
+def fixup_done(name):
+    return (FIXUP_STATE_DIR / name).exists()
+
+
+def mark_fixup_done(name):
+    try:
+        FIXUP_STATE_DIR.mkdir(parents=True, exist_ok=True)
+        (FIXUP_STATE_DIR / name).touch()
+    except OSError:
+        pass
+
 
 def rewrite_file(path, pattern, replacement):
     try:
@@ -50,8 +64,91 @@ def fix_proton_11_tool_id():
         print(f"Rewrote CachyOS Proton 11 compatibility tool ID to {PROTON_11_STABLE}")
 
 
+def strip_compat_wildcard_block(text):
+    lines = text.split("\n")
+    key = re.compile(r'^\s*"([^"]*)"\s*$')
+    out = []
+    stack = []
+    removed = False
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        match = key.match(line)
+        if match and i + 1 < n and lines[i + 1].strip() == "{":
+            name = match.group(1)
+            parent = stack[-1] if stack else None
+            if name == "0" and parent == "CompatToolMapping":
+                depth = 0
+                j = i + 1
+                while j < n:
+                    stripped = lines[j].strip()
+                    if stripped == "{":
+                        depth += 1
+                    elif stripped == "}":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    j += 1
+                # fix_proton_11_tool_id (run first in main) has already normalized any versioned id to
+                # PROTON_11_STABLE, so match that exactly; a "0" set to any other tool is the user's.
+                tool = ""
+                for block_line in lines[i:j + 1]:
+                    tool_match = re.match(r'^\s*"name"\s+"([^"]*)"', block_line)
+                    if tool_match:
+                        tool = tool_match.group(1)
+                        break
+                if tool == PROTON_11_STABLE:
+                    i = j + 1
+                    removed = True
+                    continue
+                out.extend(lines[i:j + 1])
+                i = j + 1
+                continue
+            out.append(line)
+            out.append(lines[i + 1])
+            stack.append(name)
+            i += 2
+            continue
+        if line.strip() == "}":
+            if stack:
+                stack.pop()
+            out.append(line)
+            i += 1
+            continue
+        out.append(line)
+        i += 1
+    return "\n".join(out), removed
+
+
+def strip_compat_wildcard():
+    # One-time only: a user can re-enable "Steam Play for all titles" (which is this "0" entry) themselves,
+    # so a per-boot strip would fight them. Older builds wrote it and it breaks installing other Protons.
+    if fixup_done("compat-wildcard-stripped"):
+        return
+    for path in STEAM_CONFIGS:
+        try:
+            file_stat = path.stat()
+            text = path.read_text(encoding="utf-8", errors="surrogateescape")
+        except FileNotFoundError:
+            continue
+        new_text, removed = strip_compat_wildcard_block(text)
+        if not removed:
+            continue
+        if text.count("{") - new_text.count("{") != 1 or text.count("}") - new_text.count("}") != 1:
+            continue
+        tmp_path = path.with_name(f".{path.name}.armada-fixup")
+        tmp_path.write_text(new_text, encoding="utf-8", errors="surrogateescape")
+        os.chown(tmp_path, file_stat.st_uid, file_stat.st_gid)
+        os.chmod(tmp_path, stat.S_IMODE(file_stat.st_mode))
+        os.replace(tmp_path, path)
+        print('Removed legacy "0" CompatToolMapping wildcard')
+    mark_fixup_done("compat-wildcard-stripped")
+
+
 def main():
     fix_proton_11_tool_id()
+    strip_compat_wildcard()
 
 
 if __name__ == "__main__":

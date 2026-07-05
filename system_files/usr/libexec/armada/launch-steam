@@ -27,6 +27,12 @@ if [[ -d "${steam_runtime_bin}" ]]; then
     export PATH="${steam_runtime_bin}:${PATH}"
 fi
 
+# Official Proton 11.0 (ARM64) requires steamrt4 (4185400), which armada doesn't install. Steam restores it on update.
+official_proton_manifest="${steam_root}/steamapps/common/Proton 11.0 (ARM64)/toolmanifest.vdf"
+if [[ -f "${official_proton_manifest}" ]] && grep -q require_tool_appid "${official_proton_manifest}"; then
+    sed -i '/require_tool_appid/d' "${official_proton_manifest}"
+fi
+
 touch "${steam_root}/.cef-enable-remote-debugging"
 /usr/libexec/armada/powerbuttond >/dev/null 2>&1 &
 cd "${steam_arm_dir}"

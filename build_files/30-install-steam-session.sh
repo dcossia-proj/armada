@@ -51,23 +51,32 @@ sed -i \
     's/read -r -t 5 response_x_display response_wl_display/read -r -t 15 response_x_display response_wl_display/' \
     /usr/share/gamescope-session-plus/gamescope-session-plus
 
-# Fedora's FEX lacks thunks.
 dnf5 -y install --setopt=install_weak_deps=False \
-    fex-emu-rootfs-fedora \
     erofs-fuse \
     erofs-utils \
     squashfuse \
     squashfs-tools
+
 dnf5 -y install --setopt=install_weak_deps=False /packages/fex/fex-emu-*.rpm
 
+# Use Arch rootfs for better compatibility with Linux games targeting SteamOS
+mkdir -p /usr/share/fex-emu/RootFS
+ARCH_ROOTFS_URL="https://rootfs.fex-emu.gg/ArchLinux/2026-01-08/ArchLinux.ero"
+ARCH_ROOTFS_SHA256="231febb39c636feb89426a21aca3b2ceb121645dbaac7858431d1b7bc7dfde95"
+curl --retry 3 --retry-delay 2 -fsSL -o /usr/share/fex-emu/RootFS/ArchLinux.ero "${ARCH_ROOTFS_URL}"
+echo "${ARCH_ROOTFS_SHA256}  /usr/share/fex-emu/RootFS/ArchLinux.ero" | sha256sum -c -
+
 # /usr/share config stays user-overridable; ~/.fex-emu would mask it.
-mkdir -p /usr/share/fex-emu
-# Host thunks live in Fedora's lib64 path.
 cat > /usr/share/fex-emu/Config.json <<'EOF'
 {
   "Config": {
-    "RootFS": "default.erofs",
+    "RootFS": "ArchLinux.ero",
+    "TSOEnabled": "1",
     "X87ReducedPrecision": "1",
+    "Multiblock": "0",
+    "VectorTSOEnabled": "0",
+    "MemcpySetTSOEnabled": "0",
+    "HalfBarrierTSOEnabled": "1",
     "ThunkHostLibs": "/usr/lib64/fex-emu/HostThunks",
     "ThunkGuestLibs": "/usr/share/fex-emu/GuestThunks"
   },
@@ -130,9 +139,30 @@ sed -i 's#"commandline"[[:space:]]*"/proton #"commandline" "/armada-proton #' \
 python3 /ctx/build_files/set-steam-default-compat.py "${STEAM_HOME}" "${PROTON_TOOL_NAME}" "${PROTON_DIR}"
 rm -f "/tmp/${PROTON_TAR}" "/tmp/${PROTON_ARCHIVE_NAME}.sha512sum"
 
-# Pin Steam + Proton to their own rechunk layers (build-chunked-oci reads the
+# Metadata stub for Valve's official Proton 11.0 (ARM64) (appid 4628740); Steam downloads the
+# runner on install.
+OFFICIAL_PROTON_DIR="${PROTON_DIR}/proton-11-arm64"
+mkdir -p "${OFFICIAL_PROTON_DIR}"
+cat > "${OFFICIAL_PROTON_DIR}/compatibilitytool.vdf" <<'EOF'
+"compatibilitytools"
+{
+  "compat_tools"
+  {
+    "proton11_arm64"
+    {
+      "install_path" "/var/home/armada/.local/share/Steam/steamapps/common/Proton 11.0 (ARM64)"
+      "display_name" "Proton 11.0 (ARM64)"
+      "from_oslist"  "windows"
+      "to_oslist"    "linux"
+    }
+  }
+}
+EOF
+
+# Pin Steam, Proton, and the FEX rootfs to their own rechunk layers (build-chunked-oci reads the
 # user.component xattr) so a system_files change doesn't re-pull them every OTA.
 python3 -c 'import os,sys; os.setxattr(sys.argv[1],"user.component",b"steam")' "${STEAM_HOME}"
 python3 -c 'import os,sys; os.setxattr(sys.argv[1],"user.component",b"proton")' "${PROTON_DIR}/${PROTON_TOOL_NAME}"
+python3 -c 'import os,sys; os.setxattr(sys.argv[1],"user.component",b"fex-rootfs")' /usr/share/fex-emu/RootFS
 
 echo "Pre-staged: ARM64 Steam bootstrap + CachyOS Proton 11 ${PROTON_VER}"

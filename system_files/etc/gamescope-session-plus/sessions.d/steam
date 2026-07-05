@@ -19,6 +19,6 @@ if [[ -n "${ARMADA_GAMESCOPE_FAKE_OUTPUT_MM:-}" ]]; then
     export GAMESCOPE_FAKE_OUTPUT_MM="$ARMADA_GAMESCOPE_FAKE_OUTPUT_MM"
 fi
 
-export STEAM_EXTRA_COMPAT_TOOLS_PATHS=/usr/share/steam/compatibilitytools.d
+export STEAM_EXTRA_COMPAT_TOOLS_PATHS="/usr/share/steam/compatibilitytools.d:${HOME}/.local/share/Steam/compatibilitytools.d"
 
 CLIENTCMD='/usr/libexec/armada/launch-steam -gamepadui -steamos3 -steampal -steamdeck -noverifyfiles'
