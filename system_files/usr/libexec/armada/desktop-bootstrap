@@ -23,8 +23,9 @@ fi
 config_dir="${XDG_CONFIG_HOME:-${HOME}/.config}/armada"
 rotation_done="${config_dir}/desktop-rotation.done"
 scale_done="${config_dir}/desktop-scale.done"
+dual_done="${config_dir}/desktop-dualscreen.done"
 
-[[ ! -e "${rotation_done}" || ! -e "${scale_done}" ]] || exit 0
+[[ ! -e "${rotation_done}" || ! -e "${scale_done}" || ! -e "${dual_done}" ]] || exit 0
 mkdir -p "${config_dir}"
 
 if command -v /usr/libexec/armada/device-env >/dev/null 2>&1; then
@@ -56,4 +57,12 @@ fi
 
 if [[ ! -e "${scale_done}" ]] && kscreen-doctor "output.${display_connector}.scale.1.5" >/dev/null 2>&1; then
     touch "${scale_done}"
+fi
+
+if [[ ! -e "${dual_done}" ]]; then
+    if [[ -z "${ARMADA_SECONDARY_CONNECTOR:-}" ]]; then
+        touch "${dual_done}"
+    elif /usr/libexec/armada/setup-dual-screen; then
+        touch "${dual_done}"
+    fi
 fi
