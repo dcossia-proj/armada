@@ -6,3 +6,6 @@ SUBSYSTEM=="devfreq", KERNEL=="*.gpu", \
 
 SUBSYSTEM=="backlight", \
     RUN+="/bin/sh -c 'chgrp wheel /sys/class/backlight/%k/brightness 2>/dev/null; chmod g+w /sys/class/backlight/%k/brightness 2>/dev/null'"
+
+SUBSYSTEM=="input", KERNEL=="input[0-9]*", \
+    RUN+="/bin/sh -c 'chgrp wheel /sys/class/input/%k/inhibited 2>/dev/null; chmod g+w /sys/class/input/%k/inhibited 2>/dev/null'"
