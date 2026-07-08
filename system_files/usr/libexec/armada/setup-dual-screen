@@ -87,10 +87,13 @@ def main():
     if not primary or not secondary:
         return 0
 
-    outputs = json.loads(subprocess.run(
-        ["kscreen-doctor", "-o", "-j"],
+    # Some kscreen-doctor versions append human-readable text after the
+    # JSON document, so parse only the first document.
+    doc = subprocess.run(
+        ["kscreen-doctor", "-j"],
         capture_output=True, text=True, check=True,
-    ).stdout)["outputs"]
+    ).stdout
+    outputs = json.JSONDecoder().raw_decode(doc)[0]["outputs"]
     by_name = {o["name"]: o for o in outputs}
     if primary not in by_name or secondary not in by_name:
         print(f"setup-dual-screen: outputs not found: {primary}, {secondary}",
