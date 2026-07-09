@@ -1,10 +1,15 @@
 import { definePlugin } from "@decky/api";
 import { Content } from "./Content";
+import { registerDownloadWatcher } from "./lib/steamCompat";
 
 export default definePlugin(() => {
+  const unregisterDownloadWatcher = registerDownloadWatcher();
   return {
     name: "Armada Control",
     content: <Content />,
+    onDismount() {
+      unregisterDownloadWatcher();
+    },
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"

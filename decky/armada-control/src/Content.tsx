@@ -1,10 +1,11 @@
 import { Field, PanelSection, Tabs } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { getConfig, savePowerConfig, saveTweaks } from "./backend";
+import { getConfig, getInstalledGames, savePowerConfig, saveTweaks } from "./backend";
 import { useDebouncedSave } from "./hooks/useDebouncedSave";
 import { tabIcons } from "./icons";
 import { currentGame } from "./lib/games";
+import { reconcileGlobalCompat, sweepInstalledGames } from "./lib/steamCompat";
 import { styles } from "./styles";
 import { Compatibility } from "./tabs/Compatibility";
 import { Power } from "./tabs/Power";
@@ -14,9 +15,12 @@ import type { Config } from "./types";
 export function Content() {
   const [tab, setTab] = useState("Compatibility");
   const [config, setConfig] = useState<Config | null>(null);
+  const [installedGamesReady, setInstalledGamesReady] = useState(false);
   const [message, setMessage] = useState("Loading");
   const savedPowerSnapshot = useRef("");
   const savedTweaksSnapshot = useRef("");
+  const installedGamesRequested = useRef(false);
+  const startupMaintenanceStarted = useRef(false);
   const load = useCallback(async () => {
     try {
       const next = await getConfig();
@@ -24,7 +28,7 @@ export function Content() {
       next.selectedGame = next.game || null;
       savedPowerSnapshot.current = JSON.stringify(next.power);
       savedTweaksSnapshot.current = JSON.stringify(next.tweaks);
-      setConfig(next);
+      setConfig((current) => ({ ...next, installedGames: current?.installedGames || next.installedGames }));
     } catch (error) {
       setMessage(String(error));
     }
@@ -32,6 +36,39 @@ export function Content() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => {
+    if (!config || installedGamesRequested.current) return;
+    installedGamesRequested.current = true;
+    let cancelled = false;
+    getInstalledGames()
+      .then((installedGames) => {
+        if (cancelled) return;
+        setConfig((current) => (current ? { ...current, installedGames } : current));
+        setInstalledGamesReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setInstalledGamesReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [!!config]);
+  useEffect(() => {
+    if (!config || startupMaintenanceStarted.current || !installedGamesReady) return;
+    startupMaintenanceStarted.current = true;
+    const appids = (config.installedGames || []).map((game) => game.appid);
+    const compatTool = config.tweaks?.global?.compatTool;
+    const timer = window.setTimeout(() => {
+      (async () => {
+        try {
+          await reconcileGlobalCompat(compatTool);
+          await sweepInstalledGames(appids);
+        } catch (error) {
+        }
+      })();
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [installedGamesReady, config?.installedGames.length]);
   useEffect(() => {
     if (!config) return;
     let cancelled = false;

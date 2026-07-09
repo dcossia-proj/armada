@@ -10,6 +10,7 @@ from armada_control.calibration import (
 from armada_control.config import build_config
 from armada_control.controller import set_controller_type
 from armada_control.power import save_power_config
+from armada_control.steam import installed_games
 from armada_control.system import set_ssh_enabled
 from armada_control.tweaks import save_tweaks
 
@@ -17,7 +18,10 @@ from armada_control.tweaks import save_tweaks
 class Plugin:
     # Offload blocking work to a thread so a slow call can't stall Decky's asyncio loop.
     async def get_config(self):
-        return await asyncio.to_thread(build_config)
+        return await asyncio.to_thread(build_config, False)
+
+    async def get_installed_games(self):
+        return await asyncio.to_thread(installed_games)
 
     async def save_power_config(self, data):
         await asyncio.to_thread(save_power_config, data)

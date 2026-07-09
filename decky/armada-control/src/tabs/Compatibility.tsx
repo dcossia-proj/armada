@@ -1,10 +1,21 @@
-import { Field, PanelSection, ToggleField } from "@decky/ui";
+import { ButtonItem, Field, PanelSection, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { SelectEdit } from "../components/widgets";
 import { getGlobalResolution, setGlobalResolution } from "../lib/steamSettings";
 import { clone } from "../lib/util";
 import { availableGames, editTargetOptions } from "../lib/games";
+import {
+  currentCompatTool,
+  getAppCompatTools,
+  getGlobalCompatTool,
+  getProtonTools,
+  isUnsetGlobal,
+  resolveCompatTool,
+  setGlobalCompatTool,
+  specifyCompatTool,
+} from "../lib/steamCompat";
+import type { CompatTool } from "../lib/steamCompat";
 import type { Config } from "../types";
 
 const resolutionOptions = [
@@ -35,6 +46,11 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
   const [defaultResolution, setDefaultResolution] = useState(getGlobalResolution());
   const [resolutionMessage, setResolutionMessage] = useState("");
   const [customSelected, setCustomSelected] = useState(false);
+  const [showThunks, setShowThunks] = useState(false);
+  const [compatTools, setCompatTools] = useState<CompatTool[]>([]);
+  const [perGameTools, setPerGameTools] = useState<CompatTool[]>([]);
+  const [currentTool, setCurrentTool] = useState("");
+  const [globalTool, setGlobalTool] = useState("");
   const runtimeGame = config.game;
   const games = availableGames(config);
   const selectedGame = config.selectedGame || runtimeGame || null;
@@ -68,44 +84,75 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
     setCustomSelected(false);
   }, [game?.appid]);
   useEffect(() => {
+    let cancelled = false;
+    getProtonTools().then((tools) => {
+      if (!cancelled) setCompatTools(tools);
+    });
+    getGlobalCompatTool().then((tool) => {
+      if (!cancelled && tool !== null) setGlobalTool(tool);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
+    if (!game?.appid) {
+      setCurrentTool("");
+      setPerGameTools([]);
+      return;
+    }
+    const appid = game.appid;
+    let cancelled = false;
+    setCurrentTool(currentCompatTool(appid));
+    resolveCompatTool(appid).then((tool) => {
+      if (!cancelled) setCurrentTool(tool);
+    });
+    getAppCompatTools(appid).then((tools) => {
+      if (!cancelled) setPerGameTools(tools);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.appid]);
+  useEffect(() => {
     setDefaultResolution(getGlobalResolution());
   }, []);
   const gameSettings = game?.appid ? tweaks.games[game.appid] || {} : {};
   const editingDefault = !game?.appid;
-  const perGameEnabled = !!(game?.appid && gameSettings.enabled === true);
-  const values = editingDefault || !perGameEnabled ? tweaks.global : { ...tweaks.global, ...gameSettings };
+  const values = editingDefault ? tweaks.global : { ...tweaks.global, ...gameSettings };
   const patchSettings = (patch: Record<string, any>) => {
     setConfig((current) => {
       if (!current) return current;
       const next = clone(current);
       if (editingDefault) {
         Object.assign(next.tweaks.global, patch);
-      } else if (perGameEnabled) {
-        const existing = next.tweaks.games[game!.appid] || {};
-        next.tweaks.games[game!.appid] = { ...existing, enabled: true, name: game!.name || "", ...patch };
+      } else if (game?.appid) {
+        const existing = next.tweaks.games[game.appid] || {};
+        next.tweaks.games[game.appid] = { ...existing, name: game.name || "", ...patch };
       }
       return next;
     });
   };
-  const setPerGameEnabled = async (enabled: boolean) => {
+  const resetGame = async () => {
     if (!game?.appid) return;
+    const appid = game.appid;
     setConfig((current) => {
       if (!current) return current;
       const next = clone(current);
-      next.tweaks.games[game.appid] = {
-        ...(next.tweaks.games[game.appid] || {}),
-        enabled,
-        name: game.name || "",
-      };
+      delete next.tweaks.games[appid];
       return next;
     });
-    if (!enabled && apps?.SetAppResolutionOverride) {
+    try {
+      await specifyCompatTool(appid, "");
+      setCurrentTool("");
+    } catch (error) {
+    }
+    if (apps?.SetAppResolutionOverride) {
       try {
-        await apps.SetAppResolutionOverride(Number(game.appid), "Default");
+        await apps.SetAppResolutionOverride(Number(appid), "Default");
         setResolution("Default");
         setResolutionMessage("");
       } catch (error) {
-        setResolutionMessage("Failed to clear resolution override");
       }
     }
   };
@@ -142,6 +189,28 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
     setConfig((current) => (current ? { ...current, selectedGame: saved || null } : current));
   };
 
+  const toolOptions = compatTools.map((tool) => ({ data: tool.id, label: tool.label }));
+  const defaultToolOptions = [{ data: "", label: "Steam Controlled" }, ...toolOptions];
+  const onSelectGlobalDefault = (choice: any) => {
+    const name = String(choice);
+    setGlobalTool(name);
+    setGlobalCompatTool(name).catch(() => {});
+    patchSettings({ compatTool: name });
+  };
+  const perGameToolOptions = [
+    { data: "", label: "Use Default" },
+    ...perGameTools.map((tool) => ({ data: tool.id, label: tool.label })),
+  ];
+  const onSelectPerGameTool = async (choice: any) => {
+    if (!game?.appid) return;
+    const target = String(choice);
+    try {
+      await specifyCompatTool(game.appid, target);
+      setCurrentTool(target);
+    } catch (error) {
+    }
+  };
+
   const presets = config.fexProfiles || {};
   const presetEntries = Object.entries(presets);
   const storedProfile = values.fexProfile as string | undefined;
@@ -172,33 +241,42 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
       <PanelSection title="EDIT GAME PROFILE">
         <SelectEdit value={game?.appid || ""} options={gameOptions} onChange={setSelectedGame} />
         <div className="armada-compat-note">Compatibility changes apply on next launch</div>
-        {!editingDefault ? <ToggleField label="Use Per-Game Settings" checked={perGameEnabled} onChange={setPerGameEnabled} /> : null}
       </PanelSection>
-      {editingDefault || perGameEnabled ? (
-        <PanelSection title="PROFILE SETTINGS">
-          {editingDefault ? (
-            <>
-              <SelectEdit label="Game Resolution" value={defaultResolution} options={resolutionOptions} onChange={setSteamDefaultResolution} />
-              {resolutionMessage ? <Field label="Status" description={resolutionMessage} /> : null}
-            </>
-          ) : null}
-          {!editingDefault && perGameEnabled ? (
-            <>
-              <SelectEdit label="Game Resolution" value={resolution} options={resolutionOptions} onChange={setSteamResolution} />
-              {resolutionMessage ? <Field label="Status" description={resolutionMessage} /> : null}
-            </>
-          ) : null}
-          <SelectEdit label="FEX Preset" value={fexValue} options={fexOptions} onChange={onSelectFex} />
-          {isCustom ? (
-            <>
-              {fexKnobs.map((knob) => (
-                <ToggleField key={knob.key} label={knob.label} checked={fexConfig[knob.key] === "1"} onChange={(value) => setKnob(knob.key, value)} />
-              ))}
-              {thunkModules.map((thunk) => (
-                <ToggleField key={thunk.module} label={thunk.label} checked={thunks[thunk.module] !== false} onChange={(value) => setThunk(thunk.module, value)} />
-              ))}
-            </>
-          ) : null}
+      <PanelSection title="PROFILE SETTINGS">
+        {editingDefault ? (
+          <>
+            <SelectEdit labelBelow label="Default Proton" value={isUnsetGlobal(globalTool) ? "" : globalTool} options={defaultToolOptions} onChange={onSelectGlobalDefault} />
+            <SelectEdit label="Game Resolution" value={defaultResolution} options={resolutionOptions} onChange={setSteamDefaultResolution} />
+          </>
+        ) : (
+          <>
+            <SelectEdit labelBelow label="Compatibility Tool" value={currentTool} options={perGameToolOptions} onChange={onSelectPerGameTool} />
+            <SelectEdit label="Game Resolution" value={resolution} options={resolutionOptions} onChange={setSteamResolution} />
+          </>
+        )}
+        {resolutionMessage ? <Field label="Status" description={resolutionMessage} /> : null}
+        <SelectEdit label="FEX Preset" value={fexValue} options={fexOptions} onChange={onSelectFex} />
+        {isCustom
+          ? fexKnobs.map((knob) => (
+              <ToggleField key={knob.key} label={knob.label} checked={fexConfig[knob.key] === "1"} onChange={(value) => setKnob(knob.key, value)} />
+            ))
+          : null}
+      </PanelSection>
+      <PanelSection title="ADVANCED">
+        <ButtonItem layout="below" onClick={() => setShowThunks((value) => !value)}>
+          {showThunks ? "Hide Host Thunks" : "Host Thunks"}
+        </ButtonItem>
+        {showThunks
+          ? thunkModules.map((thunk) => (
+              <ToggleField key={thunk.module} label={thunk.label} checked={thunks[thunk.module] !== false} onChange={(value) => setThunk(thunk.module, value)} />
+            ))
+          : null}
+      </PanelSection>
+      {!editingDefault ? (
+        <PanelSection>
+          <ButtonItem layout="below" onClick={resetGame}>
+            Reset to Default
+          </ButtonItem>
         </PanelSection>
       ) : null}
     </>

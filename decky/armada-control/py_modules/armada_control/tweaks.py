@@ -2,7 +2,7 @@ import copy
 import json
 from pathlib import Path
 
-from .system import atomically_write
+from .privileged import call
 
 TWEAKS_CONFIG = Path("/etc/armada/game-tweaks.json")
 FEX_PROFILES_CONFIG = Path("/usr/share/armada/fex-profiles.json")
@@ -46,15 +46,15 @@ def load_tweaks():
                 str(k): v for k, v in loaded["games"].items()
                 if str(k).isdigit() and isinstance(v, dict)
             }
-    for game in data["games"].values():
-        if not isinstance(game, dict):
-            continue
-        game["enabled"] = bool(game.get("enabled", False))
+    data["games"] = {
+        gid: {k: v for k, v in game.items() if k != "enabled"}
+        for gid, game in data["games"].items()
+        if isinstance(game, dict) and game.get("enabled") is not False
+    }
     return data
 
 
 def sanitize_tweaks(data):
-    # This file is read by the root proton wrapper, so reject non-appid keys and oversized input.
     if not isinstance(data, dict):
         raise ValueError("tweaks must be an object")
     if len(json.dumps(data)) > 256 * 1024:
@@ -71,4 +71,4 @@ def sanitize_tweaks(data):
 
 
 def save_tweaks(data):
-    atomically_write(TWEAKS_CONFIG, json.dumps(sanitize_tweaks(data), indent=2, sort_keys=True) + "\n", 0o644)
+    call("write_config", name="tweaks", text=json.dumps(sanitize_tweaks(data), indent=2, sort_keys=True) + "\n")
