@@ -140,6 +140,38 @@ def inject_x86_protocol_libs():
                 shutil.copy2(src, dest)
 
 
+def repair_wedged_controller():
+    # x86 Proton can leave the pad registered as a bare USB device, never promoted to
+    # WINEXINPUT (dead under x86 too); an arm64ec Proton reusing that prefix then can't
+    # re-register it - winebus hits "already exists" (plugplay 0xe000020b) - and inherits
+    # the dead pad. Drop the stale VID_28DE sections to re-register.
+    data_path = os.environ.get("STEAM_COMPAT_DATA_PATH")
+    if not data_path:
+        return
+    reg = pathlib.Path(data_path) / "pfx" / "system.reg"
+    try:
+        text = reg.read_text(encoding="utf-8", errors="surrogateescape")
+    except FileNotFoundError:
+        return
+    lines = text.splitlines(keepends=True)
+    pad_sections = sum(1 for line in lines if line.startswith("[") and "VID_28DE" in line)
+    if not pad_sections or any("WINEXINPUT" in line for line in lines):
+        return  # no pad registered, or it promoted fine - leave the prefix alone
+    reg.with_name("system.reg.armada-bak").write_text(
+        text, encoding="utf-8", errors="surrogateescape")
+    kept, skip = [], False
+    for line in lines:
+        if line.startswith("["):
+            skip = "VID_28DE" in line
+        if not skip:
+            kept.append(line)
+    tmp = reg.with_name(".system.reg.armada-tmp")
+    tmp.write_text("".join(kept), encoding="utf-8", errors="surrogateescape")
+    os.replace(tmp, reg)
+    print(f"armada-game-launch: cleared wedged controller state "
+          f"({pad_sections} pad sections)", file=sys.stderr)
+
+
 def main():
     args = sys.argv[1:]
     if not args:
@@ -157,6 +189,11 @@ def main():
         inject_x86_protocol_libs()
     except Exception as exc:
         print(f"armada-game-launch: protocol-lib inject skipped: {exc}", file=sys.stderr)
+
+    try:
+        repair_wedged_controller()
+    except Exception as exc:
+        print(f"armada-game-launch: controller repair skipped: {exc}", file=sys.stderr)
 
     try:
         os.execv(args[0], args)
