@@ -1,6 +1,3 @@
-// Compat driven through the live SteamClient API (Steam owns config.vdf): the
-// global default Proton (the CompatToolMapping "0" wildcard) and the launch wrapper.
-
 export interface CompatTool {
   id: string;
   label: string;
@@ -10,7 +7,12 @@ const apps = () => window.SteamClient?.Apps;
 const settings = () => window.SteamClient?.Settings;
 
 // Keep in sync with PROTON_TOOL_NAME (build) and PROTON_11_STABLE (armada-fixups).
-export const DEFAULT_GLOBAL_COMPAT_TOOL = "proton-cachyos-11.0-arm64";
+export const DEFAULT_WINDOWS_COMPAT_TOOL = "proton-cachyos-11.0-arm64";
+let windowsCompatTool = DEFAULT_WINDOWS_COMPAT_TOOL;
+
+export function setWindowsCompatTool(toolName: string | undefined): void {
+  windowsCompatTool = toolName || DEFAULT_WINDOWS_COMPAT_TOOL;
+}
 
 function mapCompatTools(raw: any): CompatTool[] {
   if (!Array.isArray(raw)) return [];
@@ -22,17 +24,12 @@ function mapCompatTools(raw: any): CompatTool[] {
     .filter((tool: CompatTool) => tool.id);
 }
 
-// GetGlobalCompatTools is Proton-only (Steam filters server-side). Cached: changes only on tool install/remove.
-let protonToolsCache: CompatTool[] | null = null;
-
-export async function getProtonTools(refresh = false): Promise<CompatTool[]> {
-  if (protonToolsCache && !refresh) return protonToolsCache;
+// Steam can discover custom tools after frontend startup, so this result cannot be cached.
+export async function getProtonTools(): Promise<CompatTool[]> {
   try {
-    const list = mapCompatTools(await settings()?.GetGlobalCompatTools?.());
-    if (list.length) protonToolsCache = list;
-    return list;
+    return mapCompatTools(await settings()?.GetGlobalCompatTools?.());
   } catch (error) {
-    return protonToolsCache ?? [];
+    return [];
   }
 }
 
@@ -42,65 +39,6 @@ export async function getAppCompatTools(appid: string): Promise<CompatTool[]> {
     return mapCompatTools(await apps()?.GetAvailableCompatTools?.(Number(appid)));
   } catch (error) {
     return [];
-  }
-}
-
-// Steam reports "proton-stable" (not a real tool) when no "0" mapping is set: "Steam controlled".
-export function isUnsetGlobal(tool: string): boolean {
-  return tool === "" || tool === "proton-stable" || tool === "proton_stable";
-}
-
-// RegisterForSettingsChanges fires with current state on subscription; null on timeout/unavailable.
-export function getGlobalCompatTool(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const store = settings();
-    if (!store?.RegisterForSettingsChanges) {
-      resolve(null);
-      return;
-    }
-    let done = false;
-    let handle: any;
-    const finish = (value: string | null) => {
-      if (done) return;
-      done = true;
-      try {
-        handle?.unregister?.();
-      } catch (error) {
-      }
-      resolve(value);
-    };
-    try {
-      handle = store.RegisterForSettingsChanges((state: any) => finish(String(state?.strCompatTool ?? "")));
-    } catch (error) {
-      resolve(null);
-      return;
-    }
-    window.setTimeout(() => finish(null), 3000);
-  });
-}
-
-export async function setGlobalCompatTool(toolName: string): Promise<void> {
-  try {
-    await settings()?.SpecifyGlobalCompatTool?.(toolName);
-  } catch (error) {
-  }
-}
-
-// Enforces the armada default onto Steam's live mapping, reverting changes made in Steam's
-// own panel. undefined -> cachy default; "" -> Steam Controlled (?? keeps "" distinct).
-export async function reconcileGlobalCompat(stored: string | undefined): Promise<void> {
-  let live: string | null = null;
-  for (let attempt = 0; attempt < 6; attempt++) {
-    live = await getGlobalCompatTool();
-    if (live !== null) break;
-    await delay(2000);
-  }
-  if (live === null) return;
-  const desired = stored ?? DEFAULT_GLOBAL_COMPAT_TOOL;
-  if (desired === "") {
-    if (!isUnsetGlobal(live)) await setGlobalCompatTool("");
-  } else if (live !== desired) {
-    await setGlobalCompatTool(desired);
   }
 }
 
@@ -116,12 +54,10 @@ export function currentCompatTool(appid: string): string {
   return String(appDetails(appid)?.strCompatToolName || "");
 }
 
-// Polls until Steam loads details, so the picker doesn't show "Use Default" over a real override.
 export async function resolveCompatTool(appid: string): Promise<string> {
   return String((await resolveDetails(appid))?.strCompatToolName || "");
 }
 
-// "" clears the override, so the game follows the global default.
 export async function specifyCompatTool(appid: string, toolName: string): Promise<void> {
   await apps()?.SpecifyCompatTool?.(Number(appid), toolName);
 }
@@ -194,6 +130,74 @@ export async function applyLaunchWrapperToGame(appid: string): Promise<boolean> 
   return true;
 }
 
+async function applyWindowsCompatDefault(appid: string): Promise<boolean> {
+  const type = await resolveOverviewType(appid);
+  if (type === null) return false;
+  if (type !== 1) return true;
+  const details = await resolveDetails(appid);
+  if (!details) return false;
+  if (Number(details.nCompatToolPriority || 0) >= 250) return true;
+
+  const protonTools = await getProtonTools();
+  const protonIDs = new Set(protonTools.map((tool) => tool.id));
+  if (!protonIDs.has(windowsCompatTool)) return false;
+  const current = String(details.strCompatToolName || "");
+  const platforms = Array.isArray(details.vecPlatforms) ? details.vecPlatforms.map(String) : [];
+  const windowsOnly = platforms.includes("windows") && !platforms.includes("linux");
+  if (current === "" && platforms.length === 0) return false;
+  if (current === "" && !windowsOnly) return true;
+  if (!protonIDs.has(current) && !(current === "" && windowsOnly)) return true;
+  try {
+    await specifyCompatTool(appid, windowsCompatTool);
+  } catch (error) {
+    return false;
+  }
+  return true;
+}
+
+async function applyGamePolicy(appid: string): Promise<boolean> {
+  const wrapped = await applyLaunchWrapperToGame(appid);
+  const compat = await applyWindowsCompatDefault(appid);
+  return wrapped && compat;
+}
+
+async function applyGamePolicyWithRetries(appid: string): Promise<void> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    if (await applyGamePolicy(appid)) return;
+    await delay(5000);
+  }
+}
+
+export async function migrateWindowsCompatTool(appids: string[], oldTool: string, newTool: string): Promise<void> {
+  if (!oldTool || oldTool === newTool) return;
+  const protonTools = await getProtonTools();
+  if (!protonTools.some((tool) => tool.id === newTool)) return;
+  setWindowsCompatTool(newTool);
+  for (const appid of appids) {
+    const type = await resolveOverviewType(appid);
+    if (type !== 1) continue;
+    const details = await resolveDetails(appid);
+    if (!details) continue;
+    if (Number(details.nCompatToolPriority || 0) < 250) continue;
+    if (String(details.strCompatToolName || "") !== oldTool) continue;
+    try {
+      await specifyCompatTool(appid, newTool);
+    } catch (error) {
+    }
+  }
+}
+
+export async function resetCompatToolToDefault(appid: string): Promise<string> {
+  const details = await resolveDetails(appid);
+  if (!details) return "";
+  const protonTools = await getProtonTools();
+  const protonIDs = new Set(protonTools.map((tool) => tool.id));
+  const current = String(details.strCompatToolName || "");
+  if (!protonIDs.has(current) || !protonIDs.has(windowsCompatTool)) return current;
+  await specifyCompatTool(appid, windowsCompatTool);
+  return windowsCompatTool;
+}
+
 // Unknown app_type (overview not loaded yet) is treated as a game so a real game is never hidden.
 export function isGameApp(appid: string): boolean {
   try {
@@ -214,7 +218,7 @@ export async function sweepInstalledGames(appids: string[]): Promise<void> {
     const worker = async () => {
       while (next < pending.length) {
         const appid = pending[next++];
-        if (!(await applyLaunchWrapperToGame(appid))) unresolved.push(appid);
+        if (!(await applyGamePolicy(appid))) unresolved.push(appid);
       }
     };
     await Promise.all(Array.from({ length: Math.min(10, pending.length) }, worker));
@@ -231,7 +235,7 @@ export function registerDownloadWatcher(): () => void {
   const flush = () => {
     timer = undefined;
     for (const appid of pending) {
-      applyLaunchWrapperToGame(appid);
+      applyGamePolicyWithRetries(appid);
     }
     pending.clear();
   };

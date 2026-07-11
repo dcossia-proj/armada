@@ -1,18 +1,19 @@
 import { ButtonItem, Field, PanelSection, ToggleField } from "@decky/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { SelectEdit } from "../components/widgets";
 import { getGlobalResolution, setGlobalResolution } from "../lib/steamSettings";
 import { clone } from "../lib/util";
 import { availableGames, editTargetOptions } from "../lib/games";
 import {
+  DEFAULT_WINDOWS_COMPAT_TOOL,
   currentCompatTool,
   getAppCompatTools,
-  getGlobalCompatTool,
   getProtonTools,
-  isUnsetGlobal,
+  migrateWindowsCompatTool,
+  resetCompatToolToDefault,
   resolveCompatTool,
-  setGlobalCompatTool,
+  setWindowsCompatTool,
   specifyCompatTool,
 } from "../lib/steamCompat";
 import type { CompatTool } from "../lib/steamCompat";
@@ -50,11 +51,15 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
   const [compatTools, setCompatTools] = useState<CompatTool[]>([]);
   const [perGameTools, setPerGameTools] = useState<CompatTool[]>([]);
   const [currentTool, setCurrentTool] = useState("");
-  const [globalTool, setGlobalTool] = useState("");
+  const [globalTool, setGlobalTool] = useState(
+    String(config.tweaks?.global?.windowsCompatTool || DEFAULT_WINDOWS_COMPAT_TOOL),
+  );
   const runtimeGame = config.game;
   const games = availableGames(config);
   const selectedGame = config.selectedGame || runtimeGame || null;
   const game = selectedGame;
+  const selectedAppidRef = useRef("");
+  selectedAppidRef.current = game?.appid || "";
   const tweaks = config.tweaks;
   const apps = window.SteamClient?.Apps;
   useEffect(() => {
@@ -88,9 +93,6 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
     getProtonTools().then((tools) => {
       if (!cancelled) setCompatTools(tools);
     });
-    getGlobalCompatTool().then((tool) => {
-      if (!cancelled && tool !== null) setGlobalTool(tool);
-    });
     return () => {
       cancelled = true;
     };
@@ -114,6 +116,25 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
       cancelled = true;
     };
   }, [game?.appid]);
+  useEffect(() => {
+    if (!apps?.RegisterForAppOverviewChanges) return;
+    let cancelled = false;
+    let timer: number | undefined;
+    apps.RegisterForAppOverviewChanges(() => {
+      const appid = selectedAppidRef.current;
+      if (!appid || cancelled) return;
+      if (timer !== undefined) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        resolveCompatTool(appid).then((tool) => {
+          if (!cancelled && selectedAppidRef.current === appid) setCurrentTool(tool);
+        }).catch(() => {});
+      }, 250);
+    });
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [apps]);
   useEffect(() => {
     setDefaultResolution(getGlobalResolution());
   }, []);
@@ -143,8 +164,7 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
       return next;
     });
     try {
-      await specifyCompatTool(appid, "");
-      setCurrentTool("");
+      setCurrentTool(await resetCompatToolToDefault(appid));
     } catch (error) {
     }
     if (apps?.SetAppResolutionOverride) {
@@ -190,17 +210,15 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
   };
 
   const toolOptions = compatTools.map((tool) => ({ data: tool.id, label: tool.label }));
-  const defaultToolOptions = [{ data: "", label: "Steam Controlled" }, ...toolOptions];
-  const onSelectGlobalDefault = (choice: any) => {
+  const onSelectGlobalDefault = async (choice: any) => {
     const name = String(choice);
+    const oldTool = String(tweaks.global.windowsCompatTool || DEFAULT_WINDOWS_COMPAT_TOOL);
     setGlobalTool(name);
-    setGlobalCompatTool(name).catch(() => {});
-    patchSettings({ compatTool: name });
+    setWindowsCompatTool(name);
+    patchSettings({ windowsCompatTool: name });
+    await migrateWindowsCompatTool(config.installedGames.map((installed) => installed.appid), oldTool, name);
   };
-  const perGameToolOptions = [
-    { data: "", label: "Use Default" },
-    ...perGameTools.map((tool) => ({ data: tool.id, label: tool.label })),
-  ];
+  const perGameToolOptions = perGameTools.map((tool) => ({ data: tool.id, label: tool.label }));
   const onSelectPerGameTool = async (choice: any) => {
     if (!game?.appid) return;
     const target = String(choice);
@@ -245,7 +263,7 @@ export function Compatibility({ config, setConfig }: { config: Config; setConfig
       <PanelSection title="PROFILE SETTINGS">
         {editingDefault ? (
           <>
-            <SelectEdit labelBelow label="Default Proton" value={isUnsetGlobal(globalTool) ? "" : globalTool} options={defaultToolOptions} onChange={onSelectGlobalDefault} />
+            <SelectEdit labelBelow label="Default Proton" value={globalTool} options={toolOptions} onChange={onSelectGlobalDefault} />
             <SelectEdit label="Game Resolution" value={defaultResolution} options={resolutionOptions} onChange={setSteamDefaultResolution} />
           </>
         ) : (

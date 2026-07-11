@@ -1,13 +1,25 @@
 import { definePlugin } from "@decky/api";
+import { getConfig, getInstalledGames } from "./backend";
 import { Content } from "./Content";
-import { registerDownloadWatcher } from "./lib/steamCompat";
+import { registerDownloadWatcher, setWindowsCompatTool, sweepInstalledGames } from "./lib/steamCompat";
 
 export default definePlugin(() => {
   const unregisterDownloadWatcher = registerDownloadWatcher();
+  let cancelled = false;
+  Promise.all([getConfig(), getInstalledGames()])
+    .then(([config, games]) => {
+      if (cancelled) return;
+      setWindowsCompatTool(config.tweaks?.global?.windowsCompatTool);
+      window.setTimeout(() => {
+        if (!cancelled) sweepInstalledGames(games.map((game) => game.appid));
+      }, 3000);
+    })
+    .catch(() => {});
   return {
     name: "Armada Control",
     content: <Content />,
     onDismount() {
+      cancelled = true;
       unregisterDownloadWatcher();
     },
     icon: (
