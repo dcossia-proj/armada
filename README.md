@@ -205,7 +205,7 @@ failed boot falls back to the previous image.
 
 ## Community
 
-Join the Discord: [discord.gg/WSA8HKdpX](https://discord.gg/WSA8HKdpX)
+Join the Discord: [discord.gg/HdmdSxTD5S](https://discord.gg/HdmdSxTD5S)
 
 ## Credits
 
