@@ -722,7 +722,7 @@ qdbus6 org.kde.KWin /KWin reconfigure
 1. `systemctl --user restart armada-nested-gaming.service`, launch a game.
 2. Verify the top overlay behaves as before (Steam slider shows/hides/levels it).
 3. Run `~/hud-test/hud-toggle` over SSH: bottom HUD appears fullscreen on the bottom panel, top overlay gone, FPS plausible (not halved/garbage). Verify `xprop` window class is really `mangoapp` and the KWin rule caught it; fix `wmclass`/`screen` in `system_files/etc/xdg/kwinrulesrc` if not.
-4. Press the AYN button: HUD returns to top. Press again: back to bottom. Confirm volume-up still works and the game shows no reaction to F24.
+4. Press the AYN button: HUD returns to top. Press again: back to bottom. Confirm volume-up still works, the game shows no reaction to F24, and game input is never yanked away when the bottom HUD window maps (if KWin focuses it, add `acceptfocus=false` + `acceptfocusrule=2` to the armada-hud-bottom rule). Also confirm Steam's slider still shows/hides/levels the top overlay (the unit-extracted mangoapp no longer inherits STEAM_*/GAMESCOPE_WAYLAND_DISPLAY from the session script).
 5. Switch to desktop mode: all three HUD units stop (`systemctl --user status armada-hud-{top,bottom} armada-ayn-button`); AYN presses do nothing. Switch back: state is top.
 6. Kill Steam (client-update simulation: `pkill -x steam`): session restarts, HUD comes back on top, no unit in failed state.
 7. Tune `mangohud-bottom.conf` values (font_size, columns, params that read zero on Adreno) until readable; copy final values back into the repo file.

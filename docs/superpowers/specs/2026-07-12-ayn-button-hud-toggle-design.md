@@ -112,7 +112,11 @@ Extracts the inline mangoapp restart-loop from `nested-gaming`:
   `PartOf=armada-nested-gaming.service`, `After=graphical-session.target`,
   `Conflicts=armada-hud-top.service`.
 - `Conflicts=` is declared in both HUD units for self-documentation;
-  systemd enforces it from either side.
+  systemd enforces it from either side. `Conflicts=` alone implies no
+  ordering, so `armada-hud-bottom.service` also declares
+  `After=armada-hud-top.service`: an ordering edge makes systemd run the
+  old HUD's stop job before the new HUD's start job in both toggle
+  directions, keeping the stats queue single-consumer even mid-swap.
 
 ### 5. Bottom HUD config — `/usr/share/armada/mangohud-bottom.conf`
 
