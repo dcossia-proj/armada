@@ -1,3 +1,0 @@
-# Keep the GPU runtime PM resident; the GMU wedges under rapid idle/resume churn.
-ACTION=="add",  SUBSYSTEM=="platform", KERNEL=="3d00000.gpu", TEST=="power/control", ATTR{power/control}="on"
-ACTION=="bind", SUBSYSTEM=="platform", KERNEL=="3d00000.gpu", TEST=="power/control", ATTR{power/control}="on"

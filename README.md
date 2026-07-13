@@ -187,10 +187,15 @@ than it would be with real suspend.
 > Over-the-air updates are new and still being validated. You may need to reflash
 > if an update fails.
 
-Armada supports several release channels (only `Beta` is currently in use) and can 
-update itself in place, with no reflash and no need to redownload games. Trigger an 
-update from Steam's system settings. Updates are image-based with rollback, so a 
-failed boot falls back to the previous image.
+Armada can update itself in place, with no reflash and no need to redownload
+games. Choose an update channel and trigger the update from Steam's system
+settings:
+
+- **Beta** is recommended for normal use. It receives builds after they have
+  been through release testing.
+- **Preview** is the bleeding edge channel. It follows the latest commits on
+  `main` and may contain changes that are incomplete or have received little
+  on device testing.
 
 ## Known issues
 
@@ -205,7 +210,7 @@ failed boot falls back to the previous image.
 
 ## Community
 
-Join the Discord: [discord.gg/WSA8HKdpX](https://discord.gg/WSA8HKdpX)
+Join the Discord: [discord.gg/HdmdSxTD5S](https://discord.gg/HdmdSxTD5S)
 
 ## Credits
 

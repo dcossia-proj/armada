@@ -8,7 +8,7 @@ def set_display_name(compatibilitytool_path):
     text = compatibilitytool_path.read_text()
     text, count = re.subn(
         r'("display_name"\s+)"[^"]+"',
-        r'\1"Proton 11.0 (CachyOS)"',
+        r'\1"Proton 11.0 CachyOS (ARM64)"',
         text,
         count=1,
     )
