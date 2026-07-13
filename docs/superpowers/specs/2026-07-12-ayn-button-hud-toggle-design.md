@@ -90,8 +90,12 @@ Extracts the inline mangoapp restart-loop from `nested-gaming`:
   `MANGOHUD_CONFIGFILE` (the Steam-rewritten tmpfile) to
   `$XDG_RUNTIME_DIR/armada-nested-gaming.env` after the gamescope
   handshake, then starts this unit instead of spawning mangoapp itself.
-- Unit: `EnvironmentFile=%t/armada-nested-gaming.env`, `Restart=always`,
-  `RestartSec=1`, `PartOf=armada-nested-gaming.service`,
+- The unit's `ExecStart` script (`/usr/libexec/armada/hud-top`) sources the
+  env file itself and exits nonzero when it is missing (`EnvironmentFile=`
+  would silently fall back to the desktop `DISPLAY` that desktop-bootstrap
+  imports into the user manager, putting a Steam-config HUD window on the
+  desktop). Unit: `Restart=always`, `RestartSec=1`,
+  `PartOf=armada-nested-gaming.service`,
   `After=armada-nested-gaming.service`,
   `Conflicts=armada-hud-bottom.service`.
 - `nested-gaming` starts it with `reset-failed` first (start-limit hygiene,
