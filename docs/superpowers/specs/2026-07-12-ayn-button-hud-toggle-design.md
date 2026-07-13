@@ -1,4 +1,4 @@
-# AYN button HUD cycle (Thor bottom-screen performance overlay)
+# AYN button HUD toggle (Thor bottom-screen performance overlay)
 
 Date: 2026-07-12
 Device: AYN Thor (dual screen, `ARMADA_GAMING_SESSION=nested`)
@@ -6,9 +6,10 @@ Branch: `bottom-screen-perf`
 
 ## Goal
 
-Pressing the Thor's AYN button while Steam runs on the top screen cycles the
-MangoHud performance overlay through three states: top-screen overlay (today's
-behavior) → fullscreen HUD on the bottom screen → no HUD → back to top.
+Pressing the Thor's AYN button while Steam runs on the top screen toggles the
+MangoHud performance overlay between two states: top-screen overlay (today's
+behavior, Steam fully in control) ↔ fullscreen full-stats HUD on the bottom
+screen.
 
 ## Background and constraints
 
@@ -37,18 +38,16 @@ No state files.
 |--------|------------|----------|
 | top    | `armada-hud-top.service` active | mangoapp inside nested gamescope; Steam's performance-overlay slider controls visibility and level, exactly as today |
 | bottom | `armada-hud-bottom.service` active | mangoapp as a desktop window pinned fullscreen to the bottom panel, own full-stats config; Steam's slider has no effect |
-| off    | neither active | no HUD anywhere; the slider does nothing (no stats consumer exists) |
 
-Cycle per AYN press: top → bottom → off → top. Presses are ignored unless
+Toggle per AYN press: top ↔ bottom. Presses are ignored unless
 `armada-nested-gaming.service` is active. Every gaming session start —
-including Steam client-update restarts — begins in `top`.
-
-Accepted quirk (user-approved): in `top` state with the Steam slider set to
-off, that cycle stop looks identical to `off`.
+including Steam client-update restarts — begins in `top`. Turning the HUD
+fully off is done the normal way: stay in `top` and set Steam's slider to
+off.
 
 ## Components
 
-### 1. Button listener — `armada-ayn-button.service` + `/usr/libexec/armada/hud-cycle-listener`
+### 1. Button listener — `armada-ayn-button.service` + `/usr/libexec/armada/hud-toggle-listener`
 
 - User unit, `PartOf=graphical-session.target`, started by
   `desktop-bootstrap` alongside `armada-nested-gaming.service` (repo has no
@@ -56,9 +55,9 @@ off, that cycle stop looks identical to `off`.
 - Script evals `/usr/libexec/armada/device-env`. If the button vars are
   unset it exits 0 — the unit is inert on devices without the button.
 - Otherwise it reads the device with `stdbuf -oL evtest
-  /dev/input/by-path/$ARMADA_HUD_CYCLE_BUTTON_DEV` piped to a line-buffered
-  match on `$ARMADA_HUD_CYCLE_BUTTON_KEY ... value 1` (the
-  `nested-refresh-bridge` xprop pattern), running `hud-cycle` once per
+  /dev/input/by-path/$ARMADA_HUD_TOGGLE_BUTTON_DEV` piped to a line-buffered
+  match on `$ARMADA_HUD_TOGGLE_BUTTON_KEY ... value 1` (the
+  `nested-refresh-bridge` xprop pattern), running `hud-toggle` once per
   key-down.
 - The device is read passively (no `EVIOCGRAB`): volume-up on the same
   device keeps working, and F24 also propagates to the focused game via
@@ -67,18 +66,21 @@ off, that cycle stop looks identical to `off`.
 New vars in `ayn-thor.conf` (absent from `defaults.conf`):
 
 ```
-ARMADA_HUD_CYCLE_BUTTON_DEV=platform-gpio-keys-event
-ARMADA_HUD_CYCLE_BUTTON_KEY=KEY_F24
+ARMADA_HUD_TOGGLE_BUTTON_DEV=platform-gpio-keys-event
+ARMADA_HUD_TOGGLE_BUTTON_KEY=KEY_F24
 ```
 
-### 2. Cycle script — `/usr/libexec/armada/hud-cycle`
+### 2. Toggle script — `/usr/libexec/armada/hud-toggle`
 
 ```
 armada-nested-gaming.service active?   no → exit 0
-armada-hud-top active?     → systemctl --user start armada-hud-bottom   (Conflicts stops top)
-armada-hud-bottom active?  → systemctl --user stop  armada-hud-bottom   (→ off)
-neither                    → systemctl --user start armada-hud-top
+armada-hud-bottom active?  → systemctl --user start armada-hud-top      (Conflicts stops bottom)
+otherwise                  → systemctl --user start armada-hud-bottom   (Conflicts stops top)
 ```
+
+"Otherwise" (rather than requiring `armada-hud-top` active) also covers the
+transient case where neither unit is up — e.g. mid-restart — by landing in
+`bottom`, the state the user is asking for.
 
 ### 3. `armada-hud-top.service`
 
@@ -131,14 +133,14 @@ the bottom screen's logical coordinates (226,720) is decided on-device.
   retries until `nested-gaming` rewrites the env file after the new
   handshake. Self-healing; state resets to `top`.
 - **Leaving gaming mode:** both HUD units are `PartOf=armada-nested-gaming.service`
-  and stop with it; the listener stays up but `hud-cycle` gates on the
+  and stop with it; the listener stays up but `hud-toggle` gates on the
   gaming unit, so desktop-mode presses are no-ops.
 - **Bottom HUD with no game running:** gamescope still emits frame stats
   for the Steam UI; the HUD shows those numbers. Fine.
-- **Rapid presses:** `hud-cycle` is a few fast `systemctl` calls run
+- **Rapid presses:** `hud-toggle` is a few fast `systemctl` calls run
   synchronously in the listener loop; queued presses apply in order.
 - **Other devices:** button vars unset → listener exits 0; HUD units exist
-  but nothing starts them (`hud-cycle` is only reachable via the listener,
+  but nothing starts them (`hud-toggle` is only reachable via the listener,
   and `nested-gaming` starting `armada-hud-top` preserves today's behavior
   everywhere `ARMADA_GAMING_SESSION=nested`).
 
@@ -157,8 +159,9 @@ On-device via the established shim workflow (bind-mounted scripts,
 user-unit overrides), then a baked image:
 
 1. mangoapp renders sanely under KWin and the rule pins it to DSI-1.
-2. Full cycle during a real game: FPS correct in both positions (no
-   halved/garbage stats), Steam slider still works in `top` state.
+2. Toggle both directions during a real game: FPS correct in both
+   positions (no halved/garbage stats), Steam slider still works in `top`
+   state.
 3. Mode switches and a Steam client-update restart clean up and reset to
    `top`.
 4. Volume-up unaffected; F24 causes no visible effect in-game.
