@@ -4,7 +4,7 @@ import type { Config } from "../types";
 
 interface DebouncedSaveOptions {
   config: Config | null;
-  field: "power" | "tweaks" | "rgb";
+  field: "power" | "tweaks";
   snapshot: MutableRefObject<string>;
   save: (value: any) => Promise<Config>;
   setConfig: Dispatch<SetStateAction<Config | null>>;
