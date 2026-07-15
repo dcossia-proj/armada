@@ -18,11 +18,8 @@ from armada_control.rgb import get_rgb_config, apply_rgb_config, save_rgb_config
 
 class Plugin:
     async def _main(self):
-        asyncio.create_task(self._apply_rgb_on_boot())
-
-    async def _apply_rgb_on_boot(self):
         try:
-            await asyncio.to_thread(apply_rgb_config, get_rgb_config())
+            apply_rgb_config(get_rgb_config())
         except Exception:
             pass
 
