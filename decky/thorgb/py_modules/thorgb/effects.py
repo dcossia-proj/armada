@@ -1,7 +1,6 @@
 import colorsys
 
 MODES = ("off", "static", "breathing", "rainbow", "chase")
-SEGMENT_COUNT = 4
 DEFAULT_MODE = "static"
 
 
@@ -11,12 +10,11 @@ def _hsv_to_rgb255(h, s, v):
 
 
 def frame_for_stick(stick_config, now):
-    """Pure function: (mode/color/brightness/speed, time) -> (brightness, [4 x (r,g,b)]).
+    """Pure function: (mode/color/brightness/speed, time) -> (brightness, (r, g, b)).
 
-    Takes advantage of the four independently addressable zones per stick -
-    "rainbow" spaces a full hue sweep across the zones, "chase" lights one
-    zone at a time in rotation. Both simply hold a solid frame at each tick,
-    driven by the caller's animation loop.
+    Each stick is one zone - how many physical LED segments actually back it
+    is a hardware/wiring detail apply_frame handles, not something effects
+    reason about. Every mode here varies color/brightness over time only.
     """
     mode = stick_config.get("mode", DEFAULT_MODE)
     if mode not in MODES:
@@ -30,32 +28,30 @@ def frame_for_stick(stick_config, now):
     speed = max(0.05, float(stick_config.get("speed", 1.0) or 1.0))
 
     if mode == "off":
-        return 0, [(0, 0, 0)] * SEGMENT_COUNT
+        return 0, (0, 0, 0)
 
     if mode == "static":
-        return brightness, [color] * SEGMENT_COUNT
+        return brightness, color
 
     if mode == "breathing":
         # Triangle wave 0 -> 1 -> 0, ~3s period at speed=1.
         period = 3.0 / speed
         phase = (now % period) / period
         level = 1 - abs(phase * 2 - 1)
-        return round(brightness * level), [color] * SEGMENT_COUNT
+        return round(brightness * level), color
 
     if mode == "rainbow":
-        # One full hue sweep across the 4 zones, slowly rotating over time.
-        base_hue = (now * speed * 0.15) % 1.0
-        segments = [_hsv_to_rgb255((base_hue + i / SEGMENT_COUNT) % 1.0, 1.0, 1.0) for i in range(SEGMENT_COUNT)]
-        return brightness, segments
+        # Hue sweeps through the full ring over time, one color at a time.
+        hue = (now * speed * 0.15) % 1.0
+        return brightness, _hsv_to_rgb255(hue, 1.0, 1.0)
 
     if mode == "chase":
-        # One zone lit at a time, stepping around the ring.
+        # No segments to chase across - reads as a blink at the chosen color.
         step_duration = 0.5 / speed
-        active = int(now / step_duration) % SEGMENT_COUNT
-        segments = [color if i == active else (0, 0, 0) for i in range(SEGMENT_COUNT)]
-        return brightness, segments
+        on = int(now / step_duration) % 2 == 0
+        return (brightness if on else 0), color
 
-    return 0, [(0, 0, 0)] * SEGMENT_COUNT
+    return 0, (0, 0, 0)
 
 
 def effective_stick_configs(config):
