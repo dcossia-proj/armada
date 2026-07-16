@@ -70,20 +70,6 @@ export interface GameRef {
   name: string;
 }
 
-export interface RgbZone {
-  r: number;
-  g: number;
-  b: number;
-  brightness: number;
-}
-
-export interface RgbConfig {
-  enabled: boolean;
-  sync: boolean;
-  left: RgbZone;
-  right: RgbZone;
-}
-
 export interface Config {
   power: PowerConfig;
   powerDefaults: PowerConfig;
@@ -95,7 +81,6 @@ export interface Config {
   sshEnabled: boolean;
   controllerType: string;
   controllerTypes: DropdownChoice[];
-  rgb: RgbConfig;
   calibration?: CalibrationState;
   game?: GameRef | null;
   selectedGame?: GameRef | null;

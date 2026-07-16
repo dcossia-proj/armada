@@ -25,6 +25,13 @@ RUN npm ci
 COPY decky/armada-control/ ./
 RUN npm run build
 
+FROM docker.io/library/node:22-slim AS decky-build-thorgb
+WORKDIR /build
+COPY decky/thorgb/package.json decky/thorgb/package-lock.json ./
+RUN npm ci
+COPY decky/thorgb/ ./
+RUN npm run build
+
 FROM scratch AS ctx
 COPY build_files /build_files/
 COPY decky /decky/
@@ -45,6 +52,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=jupiter-hw-support,source=/rpms,target=/packages/jupiter-hw-support \
     --mount=type=bind,from=extest,source=/,target=/packages/extest \
     --mount=type=bind,from=decky-build,source=/build/dist,target=/packages/decky-dist \
+    --mount=type=bind,from=decky-build-thorgb,source=/build/dist,target=/packages/thorgb-dist \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \

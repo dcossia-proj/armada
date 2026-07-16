@@ -9,6 +9,15 @@ cp -a "${src}/py_modules" /usr/share/decky-plugins/armada-control/
 cp -a /packages/decky-dist /usr/share/decky-plugins/armada-control/dist
 rm -f /usr/share/decky-plugins/armada-control/dist/*.map
 find /usr/share/decky-plugins/armada-control -name __pycache__ -type d -prune -exec rm -rf {} +
+
+install -d -m 0755 /usr/share/decky-plugins/thorgb
+thorgb_src=/ctx/decky/thorgb
+cp -a "${thorgb_src}/plugin.json" "${thorgb_src}/package.json" "${thorgb_src}/main.py" /usr/share/decky-plugins/thorgb/
+cp -a "${thorgb_src}/py_modules" /usr/share/decky-plugins/thorgb/
+cp -a /packages/thorgb-dist /usr/share/decky-plugins/thorgb/dist
+rm -f /usr/share/decky-plugins/thorgb/dist/*.map
+find /usr/share/decky-plugins/thorgb -name __pycache__ -type d -prune -exec rm -rf {} +
+
 chmod 0755 /usr/lib/decky-loader/armada-decky-sync
 
 decky_release="$(
