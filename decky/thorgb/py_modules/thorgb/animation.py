@@ -1,11 +1,10 @@
 import asyncio
-import time
 from pathlib import Path
 
 from .effects import effective_stick_configs, frame_for_stick
 from .rgb import apply_frame
 
-TICK_INTERVAL = 0.1  # 10Hz - smooth enough for breathing/rainbow/chase, gentle on the I2C bus
+TICK_INTERVAL = 0.1  # 10Hz - fast enough to react to a fake-suspend flip promptly
 
 # Same flag fake-suspend touches/removes around a fake-sleep cycle (armada-
 # powerd and the fan logic already coordinate through it). Checking it here
@@ -19,9 +18,10 @@ class AnimationLoop:
     """Continuously applies whatever RGB config is current.
 
     Runs for the plugin's whole lifetime rather than only while a save is in
-    flight, so effects (breathing/rainbow/chase) keep animating in the
-    background. apply_frame() only writes zones whose value actually changed,
-    so holding a static/off config here costs nothing after the first tick.
+    flight, so it can also blank the LEDs the moment a fake-suspend starts and
+    restore them the moment it ends. apply_frame() only writes zones whose
+    value actually changed, so holding the same static config here costs
+    nothing after the first tick.
     """
 
     def __init__(self):
@@ -53,10 +53,9 @@ class AnimationLoop:
                     frame = {"left": (0, (0, 0, 0)), "right": (0, (0, 0, 0))}
                 else:
                     left_cfg, right_cfg = effective_stick_configs(config)
-                    now = time.monotonic()
                     frame = {
-                        "left": frame_for_stick(left_cfg, now),
-                        "right": frame_for_stick(right_cfg, now),
+                        "left": frame_for_stick(left_cfg),
+                        "right": frame_for_stick(right_cfg),
                     }
                 self.last_result = await apply_frame(frame)
             await asyncio.sleep(TICK_INTERVAL)

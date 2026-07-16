@@ -1,4 +1,4 @@
-import { Dropdown, Field, PanelSectionRow, SliderField, ToggleField } from "@decky/ui";
+import { PanelSectionRow, SliderField, ToggleField } from "@decky/ui";
 import type { ReactNode } from "react";
 
 export function ToggleRow({ label, value, onChange, description }: {
@@ -25,21 +25,6 @@ export function SliderEdit({ label, value, min, max, step, onChange }: {
   return (
     <PanelSectionRow>
       <SliderField label={label} value={value} min={min} max={max} step={step} showValue onChange={onChange} />
-    </PanelSectionRow>
-  );
-}
-
-export function SelectEdit<T extends string>({ label, value, options, onChange }: {
-  label: ReactNode;
-  value: T;
-  options: { data: T; label: string }[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <PanelSectionRow>
-      <Field label={label} childrenLayout="below" childrenContainerWidth="max">
-        <Dropdown selectedOption={value} rgOptions={options} onChange={(option) => onChange(option.data)} />
-      </Field>
     </PanelSectionRow>
   );
 }
