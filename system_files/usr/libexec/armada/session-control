@@ -2,20 +2,49 @@
 # zz- sorts after armada.conf so its Session= wins (User=/Relogin= stay there).
 set -euo pipefail
 
+# Which Plasma shell "the desktop session" means - Plasma Mobile by default,
+# switchable back to the classic Plasma Desktop via `set-desktop-shell`. Both
+# session files boot through the same KDE autostart phase (desktop-bootstrap,
+# dual-screen setup, the AYN-button/nested-gaming units), so this only picks
+# the shell on top - nothing else needs to know which one is active.
+DESKTOP_SHELL_PREF=/etc/armada/desktop-shell
+
+desktop_session_file() {
+    local pref
+    pref=$(cat "$DESKTOP_SHELL_PREF" 2>/dev/null || true)
+    if [[ $pref == classic ]]; then
+        echo armada-plasma.desktop
+    else
+        echo armada-plasma-mobile.desktop
+    fi
+}
+
 # On nested-gaming devices the desktop session hosts gaming mode as a
 # nested gamescope (launched by desktop-bootstrap), so "gamemode" boots
 # into the plasma session too.
 gamemode_session=gamescope-session-steam.desktop
 if command -v /usr/libexec/armada/device-env >/dev/null 2>&1; then
     eval "$(/usr/libexec/armada/device-env)"
-    [[ ${ARMADA_GAMING_SESSION:-} == nested ]] && gamemode_session=armada-plasma.desktop
+    [[ ${ARMADA_GAMING_SESSION:-} == nested ]] && gamemode_session=$(desktop_session_file)
 fi
 
 case "${1:-}" in
-    switch-desktop)  session=armada-plasma.desktop ;;
+    switch-desktop)  session=$(desktop_session_file) ;;
     switch-gamemode) session=$gamemode_session ;;
     default-gamemode) session=$gamemode_session; default_only=1 ;;
-    *) echo "usage: $0 {switch-desktop|switch-gamemode|default-gamemode}" >&2; exit 1 ;;
+    set-desktop-shell)
+        case "${2:-}" in
+            mobile|classic) : ;;
+            *) echo "usage: $0 set-desktop-shell {mobile|classic}" >&2; exit 1 ;;
+        esac
+        mkdir -p "$(dirname "$DESKTOP_SHELL_PREF")"
+        echo "$2" > "$DESKTOP_SHELL_PREF"
+        session=$(desktop_session_file)
+        ;;
+    *)
+        echo "usage: $0 {switch-desktop|switch-gamemode|default-gamemode|set-desktop-shell}" >&2
+        exit 1
+        ;;
 esac
 
 logout_plasma() {

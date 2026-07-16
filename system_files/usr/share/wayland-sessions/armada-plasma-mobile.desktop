@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Armada Desktop (Mobile)
+Comment=Plasma Mobile for Armada
+Exec=/usr/libexec/armada/start-plasma-mobile
+TryExec=/usr/bin/startplasmamobile
+Type=Application

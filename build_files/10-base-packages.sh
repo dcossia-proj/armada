@@ -74,6 +74,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
 dnf5 -y install --setopt=install_weak_deps=False \
     plasma-workspace \
     plasma-desktop \
+    plasma-mobile \
     plasma-pa \
     maliit-keyboard \
     libappindicator-gtk3 \
