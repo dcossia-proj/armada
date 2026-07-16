@@ -1,0 +1,27 @@
+#!/usr/bin/bash
+# AYN-button long-press action: blank/unblank the bottom OLED panel by
+# disabling its KScreen output outright (real power-off, not a black overlay
+# window - matters for OLED power draw and avoids building a compositor-level
+# black surface from scratch). Independent of gaming vs desktop mode, unlike
+# hud-toggle. KScreen persists per-output configs by connector identity, so
+# scale/position/rotation are expected to come back on their own when the
+# output re-enables; setup-dual-screen is re-run afterwards as a fallback in
+# case they don't.
+set -euo pipefail
+
+eval "$(/usr/libexec/armada/device-env)"
+
+[[ -n ${ARMADA_SECONDARY_CONNECTOR:-} ]] || exit 0
+
+state_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/armada-bottom-screen-blanked"
+
+if [[ -e "$state_file" ]]; then
+    kscreen-doctor "output.${ARMADA_SECONDARY_CONNECTOR}.enable"
+    rm -f "$state_file"
+    [[ -n ${ARMADA_SECONDARY_TOUCHSCREEN:-} ]] && /usr/libexec/armada/touchscreen-inhibit "$ARMADA_SECONDARY_TOUCHSCREEN" 0
+    /usr/libexec/armada/setup-dual-screen || true
+else
+    [[ -n ${ARMADA_SECONDARY_TOUCHSCREEN:-} ]] && /usr/libexec/armada/touchscreen-inhibit "$ARMADA_SECONDARY_TOUCHSCREEN" 1
+    kscreen-doctor "output.${ARMADA_SECONDARY_CONNECTOR}.disable"
+    touch "$state_file"
+fi

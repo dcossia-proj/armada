@@ -30,6 +30,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     rsync \
     curl \
     jq \
+    htop \
     lsof \
     unzip \
     evtest \
@@ -74,7 +75,10 @@ dnf5 -y install --setopt=install_weak_deps=False \
 dnf5 -y install --setopt=install_weak_deps=False \
     plasma-workspace \
     plasma-desktop \
+    plasma-mobile \
     plasma-pa \
+    plasma-nm \
+    bluedevil \
     maliit-keyboard \
     libappindicator-gtk3 \
     libdbusmenu-gtk3 \
