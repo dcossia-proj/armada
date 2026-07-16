@@ -142,12 +142,14 @@ def _clamp(value, low=0, high=255):
 
 
 async def apply_frame(frame, force=False):
-    """frame: {"left": (brightness, [(r,g,b) x4]), "right": (brightness, [(r,g,b) x4])}.
+    """frame: {"left": (brightness, (r,g,b)), "right": (brightness, (r,g,b))}.
 
-    Segment lists are indexed 0..3 for zones 1..4. Only writes to zones that
-    actually changed since the last applied frame, unless force=True - this
-    keeps the animation loop from hammering the I2C bus every tick when
-    nothing actually changed (e.g. "off"/"static" after the first frame).
+    Each stick is one zone: every LED segment discovered for a stick gets
+    the same color/brightness, regardless of how many physical segments
+    actually exist there. Only writes to segments whose value actually
+    changed since the last applied frame, unless force=True - this keeps
+    the animation loop from hammering the I2C bus every tick when nothing
+    actually changed (e.g. "off"/"static" after the first frame).
     """
     leds = await discover_leds()
     if not leds:
@@ -158,11 +160,8 @@ async def apply_frame(frame, force=False):
         entry = frame.get(stick)
         if not entry:
             continue
-        brightness, segment_colors = entry
-        idx = segment - 1
-        if idx >= len(segment_colors):
-            continue
-        rgb = tuple(_clamp(c) for c in segment_colors[idx])
+        brightness, color = entry
+        rgb = tuple(_clamp(c) for c in color)
         brightness_value = _clamp(brightness)
 
         cache_key = (stick, segment)

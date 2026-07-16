@@ -6,8 +6,8 @@ const MODE_OPTIONS: { data: RgbMode; label: string }[] = [
   { data: "off", label: "Off" },
   { data: "static", label: "Static Color" },
   { data: "breathing", label: "Breathing" },
-  { data: "rainbow", label: "Rainbow (4 zones)" },
-  { data: "chase", label: "Chase (4 zones)" },
+  { data: "rainbow", label: "Rainbow" },
+  { data: "chase", label: "Blink" },
 ];
 
 export function StickPanel({ title, config, onChange }: {
