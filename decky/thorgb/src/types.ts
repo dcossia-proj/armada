@@ -15,8 +15,24 @@ export interface RgbConfig {
   right: StickConfig;
 }
 
+export interface LedProbeEntry {
+  stick: "left" | "right";
+  segment: number;
+  path: string;
+  dir_exists: boolean;
+  has_multi_intensity: boolean;
+  multi_index: string | null;
+}
+
+export interface RgbDiagnostics {
+  segments: LedProbeEntry[];
+  platform_multi_led_entries: string[];
+  class_rgb_entries: string[];
+}
+
 export interface RgbState {
   config: RgbConfig;
   supported: boolean;
   modes?: RgbMode[];
+  diagnostics?: RgbDiagnostics;
 }

@@ -1,30 +1,61 @@
-import { PanelSection, PanelSectionRow, Spinner } from "@decky/ui";
-import { useEffect, useState } from "react";
+import { ButtonItem, PanelSection, PanelSectionRow, Spinner } from "@decky/ui";
+import { useCallback, useEffect, useState } from "react";
 import { getRgbState, saveRgbConfig } from "./backend";
 import { StickPanel } from "./components/StickPanel";
 import { ToggleRow } from "./components/widgets";
 import { useDebouncedSave } from "./hooks/useDebouncedSave";
-import type { RgbConfig } from "./types";
+import type { RgbConfig, RgbDiagnostics } from "./types";
+
+function Diagnostics({ diagnostics }: { diagnostics: RgbDiagnostics }) {
+  return (
+    <PanelSection title="Diagnostics">
+      <PanelSectionRow>
+        /sys/devices/platform multi-led* entries: {diagnostics.platform_multi_led_entries.length
+          ? diagnostics.platform_multi_led_entries.join(", ")
+          : "(none found)"}
+      </PanelSectionRow>
+      <PanelSectionRow>
+        /sys/class/leds rgb:* entries: {diagnostics.class_rgb_entries.length
+          ? diagnostics.class_rgb_entries.join(", ")
+          : "(none found)"}
+      </PanelSectionRow>
+      {diagnostics.segments.map((entry) => (
+        <PanelSectionRow key={`${entry.stick}-${entry.segment}-${entry.path}`}>
+          <div style={{ fontSize: "12px", opacity: entry.has_multi_intensity ? 1 : 0.5 }}>
+            {entry.stick}
+            {entry.segment}: {entry.path} — dir {entry.dir_exists ? "✓" : "✗"}, multi_intensity{" "}
+            {entry.has_multi_intensity ? "✓" : "✗"}, multi_index: {entry.multi_index ?? "(missing)"}
+          </div>
+        </PanelSectionRow>
+      ))}
+    </PanelSection>
+  );
+}
 
 export function Content() {
   const [config, setConfig] = useState<RgbConfig | null>(null);
   const [supported, setSupported] = useState<boolean | null>(null);
+  const [diagnostics, setDiagnostics] = useState<RgbDiagnostics | null>(null);
+
+  const refresh = useCallback(() => {
+    return getRgbState()
+      .then((state) => {
+        setConfig(state.config);
+        setSupported(state.supported);
+        setDiagnostics(state.diagnostics ?? null);
+      })
+      .catch(() => setSupported(false));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    getRgbState()
-      .then((state) => {
-        if (cancelled) return;
-        setConfig(state.config);
-        setSupported(state.supported);
-      })
-      .catch(() => {
-        if (!cancelled) setSupported(false);
-      });
+    refresh().catch(() => {
+      if (!cancelled) setSupported(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refresh]);
 
   useDebouncedSave(config, (next) => {
     saveRgbConfig(next)
@@ -58,8 +89,14 @@ export function Content() {
             No RGB-capable analog stick LEDs were found on this device. Settings below will be saved but won't do
             anything until compatible hardware is detected.
           </PanelSectionRow>
+          <PanelSectionRow>
+            <ButtonItem layout="below" onClick={refresh}>
+              Re-scan Hardware
+            </ButtonItem>
+          </PanelSectionRow>
         </PanelSection>
       )}
+      {supported === false && diagnostics && <Diagnostics diagnostics={diagnostics} />}
       <PanelSection title="Analog Stick Lighting">
         <ToggleRow
           label="Sync Both Sticks"
