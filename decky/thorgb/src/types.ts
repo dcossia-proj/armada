@@ -30,9 +30,21 @@ export interface RgbDiagnostics {
   class_rgb_entries: string[];
 }
 
+export interface LedApplyEntry {
+  wrote: { brightness: number; multi_intensity: string };
+  read_back: { brightness: string | null; multi_intensity: string | null };
+}
+
+export interface LastApply {
+  supported: boolean;
+  applied: string[];
+  readback: Record<string, LedApplyEntry>;
+}
+
 export interface RgbState {
   config: RgbConfig;
   supported: boolean;
   modes?: RgbMode[];
   diagnostics?: RgbDiagnostics;
+  last_apply?: LastApply | null;
 }

@@ -109,6 +109,14 @@ def _intensity_string(order, rgb):
 def _apply_segment_sync(led_dir, order, brightness, rgb):
     (led_dir / "brightness").write_text(str(brightness), encoding="utf-8")
     (led_dir / "multi_intensity").write_text(_intensity_string(order, rgb), encoding="utf-8")
+    # Read back what the kernel actually stored. If this ever disagrees with
+    # what we just wrote, the bug is in discovery/ordering, not hardware. If
+    # it agrees but the LED doesn't visually change, the kernel side applied
+    # cleanly and the HTR3212 chip itself is the suspect (see probe_hardware).
+    return {
+        "brightness": _read_text(led_dir / "brightness"),
+        "multi_intensity": _read_text(led_dir / "multi_intensity"),
+    }
 
 
 async def _guarded(func, *args):
@@ -156,6 +164,7 @@ async def apply_frame(frame, force=False):
         return {"supported": False, "applied": []}
 
     applied = []
+    readback = {}
     for (stick, segment), (led_dir, order) in leds.items():
         entry = frame.get(stick)
         if not entry:
@@ -173,4 +182,8 @@ async def apply_frame(frame, force=False):
         if result is not _FAILED:
             _last_written[cache_key] = desired
             applied.append(f"{stick}{segment}")
-    return {"supported": True, "applied": applied}
+            readback[f"{stick}{segment}"] = {
+                "wrote": {"brightness": brightness_value, "multi_intensity": _intensity_string(order, rgb)},
+                "read_back": result,
+            }
+    return {"supported": True, "applied": applied, "readback": readback}

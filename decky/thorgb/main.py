@@ -27,7 +27,12 @@ class Plugin:
         # stale cache from _main()'s first attempt (e.g. right after boot,
         # before an I2C bus or module was ready).
         leds = await discover_leds(force=True)
-        state = {"config": config, "supported": bool(leds), "modes": list(MODES)}
+        state = {
+            "config": config,
+            "supported": bool(leds),
+            "modes": list(MODES),
+            "last_apply": self._animation.last_result,
+        }
         if not leds:
             state["diagnostics"] = await probe_hardware()
         return state
