@@ -19,6 +19,7 @@ class AnimationLoop:
     def __init__(self):
         self._config = None
         self._task = None
+        self.last_result = None
 
     def set_config(self, config):
         self._config = config
@@ -46,5 +47,5 @@ class AnimationLoop:
                     "left": frame_for_stick(left_cfg, now),
                     "right": frame_for_stick(right_cfg, now),
                 }
-                await apply_frame(frame)
+                self.last_result = await apply_frame(frame)
             await asyncio.sleep(TICK_INTERVAL)
