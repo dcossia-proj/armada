@@ -3,7 +3,7 @@ import asyncio
 from thorgb.animation import AnimationLoop
 from thorgb.config import load_rgb_config, save_rgb_config
 from thorgb.effects import MODES
-from thorgb.rgb import discover_leds
+from thorgb.rgb import discover_leds, probe_hardware
 
 
 class Plugin:
@@ -23,8 +23,17 @@ class Plugin:
 
     async def get_rgb_state(self):
         config = await asyncio.to_thread(load_rgb_config)
-        probe = await discover_leds()
-        return {"config": config, "supported": bool(probe), "modes": list(MODES)}
+        # Force a fresh scan on every UI open/reload rather than trusting a
+        # stale cache from _main()'s first attempt (e.g. right after boot,
+        # before an I2C bus or module was ready).
+        leds = await discover_leds(force=True)
+        state = {"config": config, "supported": bool(leds), "modes": list(MODES)}
+        if not leds:
+            state["diagnostics"] = await probe_hardware()
+        return state
+
+    async def probe_rgb_hardware(self):
+        return await probe_hardware()
 
     async def save_rgb_config(self, config):
         saved = await asyncio.to_thread(save_rgb_config, config)

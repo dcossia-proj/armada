@@ -1,7 +1,8 @@
 import asyncio
 from pathlib import Path
 
-LEDS_ROOT = Path("/sys/class/leds")
+CLASS_ROOT = Path("/sys/class/leds")
+PLATFORM_ROOT = Path("/sys/devices/platform")
 STICKS = {"left": "l", "right": "r"}
 SEGMENTS = (1, 2, 3, 4)
 COLORS = ("red", "green", "blue")
@@ -12,12 +13,29 @@ COLORS = ("red", "green", "blue")
 IO_TIMEOUT = 1.5
 
 _FAILED = object()
-_led_cache = None
+_led_cache = None  # {(stick, segment): (Path, [color, color, color])}
 _last_written = {}
 
 
-def _led_name(stick, segment):
+def _led_short_name(stick, segment):
     return f"rgb:{STICKS[stick]}{segment}"
+
+
+def _candidate_dirs(stick, segment):
+    """Every sysfs location this LED group might actually live at.
+
+    ROCKNIX's own Thor scripts (validated on real hardware) address these
+    groups at /sys/devices/platform/multi-led<side><n>/leds/rgb:<side><n>/ -
+    that's tried first. The standard /sys/class/leds/ class path is kept as
+    a fallback in case it also resolves (every led classdev is normally
+    registered under the class tree too, but we don't assume it).
+    """
+    short = _led_short_name(stick, segment)
+    platform_name = f"multi-led{STICKS[stick]}{segment}"
+    return [
+        PLATFORM_ROOT / platform_name / "leds" / short,
+        CLASS_ROOT / short,
+    ]
 
 
 def _read_text(path):
@@ -41,18 +59,45 @@ def _channel_order(led_dir):
 
 def _discover_sync():
     discovered = {}
-    if not LEDS_ROOT.is_dir():
-        return discovered
     for stick in STICKS:
         for segment in SEGMENTS:
-            led_dir = LEDS_ROOT / _led_name(stick, segment)
-            if not (led_dir / "multi_intensity").exists():
-                continue
-            order = _channel_order(led_dir)
-            if order is None:
-                continue
-            discovered[(stick, segment)] = order
+            for led_dir in _candidate_dirs(stick, segment):
+                if not (led_dir / "multi_intensity").exists():
+                    continue
+                order = _channel_order(led_dir)
+                if order is None:
+                    continue
+                discovered[(stick, segment)] = (led_dir, order)
+                break
     return discovered
+
+
+def _probe_sync():
+    """Diagnostic snapshot of everything discovery looked at and found -
+    so a detection failure can be root-caused from the running plugin
+    without another blind guess-fix-reflash cycle."""
+    report = {"segments": [], "platform_multi_led_entries": [], "class_rgb_entries": []}
+
+    if PLATFORM_ROOT.is_dir():
+        report["platform_multi_led_entries"] = sorted(
+            p.name for p in PLATFORM_ROOT.iterdir() if p.name.startswith("multi-led")
+        )
+    if CLASS_ROOT.is_dir():
+        report["class_rgb_entries"] = sorted(p.name for p in CLASS_ROOT.iterdir() if p.name.startswith("rgb:"))
+
+    for stick in STICKS:
+        for segment in SEGMENTS:
+            for led_dir in _candidate_dirs(stick, segment):
+                entry = {
+                    "stick": stick,
+                    "segment": segment,
+                    "path": str(led_dir),
+                    "dir_exists": led_dir.is_dir(),
+                    "has_multi_intensity": (led_dir / "multi_intensity").exists(),
+                    "multi_index": _read_text(led_dir / "multi_index"),
+                }
+                report["segments"].append(entry)
+    return report
 
 
 def _intensity_string(order, rgb):
@@ -61,8 +106,7 @@ def _intensity_string(order, rgb):
     return " ".join(str(values[color]) for color in order)
 
 
-def _apply_segment_sync(stick, segment, order, brightness, rgb):
-    led_dir = LEDS_ROOT / _led_name(stick, segment)
+def _apply_segment_sync(led_dir, order, brightness, rgb):
     (led_dir / "brightness").write_text(str(brightness), encoding="utf-8")
     (led_dir / "multi_intensity").write_text(_intensity_string(order, rgb), encoding="utf-8")
 
@@ -82,6 +126,11 @@ async def discover_leds(force=False):
         _led_cache = {} if result is _FAILED else result
         _last_written.clear()
     return _led_cache
+
+
+async def probe_hardware():
+    result = await _guarded(_probe_sync)
+    return {} if result is _FAILED else result
 
 
 def _clamp(value, low=0, high=255):
@@ -105,7 +154,7 @@ async def apply_frame(frame, force=False):
         return {"supported": False, "applied": []}
 
     applied = []
-    for (stick, segment), order in leds.items():
+    for (stick, segment), (led_dir, order) in leds.items():
         entry = frame.get(stick)
         if not entry:
             continue
@@ -121,7 +170,7 @@ async def apply_frame(frame, force=False):
         if not force and _last_written.get(cache_key) == desired:
             continue
 
-        result = await _guarded(_apply_segment_sync, stick, segment, order, brightness_value, rgb)
+        result = await _guarded(_apply_segment_sync, led_dir, order, brightness_value, rgb)
         if result is not _FAILED:
             _last_written[cache_key] = desired
             applied.append(f"{stick}{segment}")
