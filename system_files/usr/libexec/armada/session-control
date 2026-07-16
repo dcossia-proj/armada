@@ -80,7 +80,14 @@ if [[ "${default_only:-0}" == "1" ]]; then
     exit 0
 fi
 
-if [[ ${1:-} == "switch-gamemode" ]] && logout_plasma; then
+# A bare sddm restart doesn't tear down an already-running Plasma session -
+# it just restarts the greeter, which has nothing to hand the new Session=
+# to until the current compositor actually exits. switch-gamemode already
+# knew this; set-desktop-shell needs it too now that switching shells means
+# going from one running Plasma session straight to another, not just
+# coming back from gamescope (which isn't Plasma and tears down on restart
+# on its own).
+if [[ ${1:-} == "switch-gamemode" || ${1:-} == "set-desktop-shell" ]] && logout_plasma; then
     exit 0
 fi
 
