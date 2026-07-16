@@ -3,11 +3,9 @@ import os
 import tempfile
 from pathlib import Path
 
-from .effects import MODES
-
 CONFIG_PATH = Path("/var/lib/thorgb/rgb-config.json")
 
-DEFAULT_STICK = {"mode": "static", "r": 0, "g": 120, "b": 255, "brightness": 128, "speed": 1.0}
+DEFAULT_STICK = {"r": 0, "g": 120, "b": 255, "brightness": 128}
 DEFAULT_CONFIG = {"sync": True, "left": dict(DEFAULT_STICK), "right": dict(DEFAULT_STICK)}
 
 
@@ -19,19 +17,12 @@ def _normalize_stick(value, base):
     stick = dict(base)
     if not isinstance(value, dict):
         return stick
-    if value.get("mode") in MODES:
-        stick["mode"] = value["mode"]
     for key in ("r", "g", "b", "brightness"):
         if key in value:
             try:
                 stick[key] = max(0, min(255, int(value[key])))
             except (TypeError, ValueError):
                 pass
-    if "speed" in value:
-        try:
-            stick["speed"] = max(0.1, min(4.0, float(value["speed"])))
-        except (TypeError, ValueError):
-            pass
     return stick
 
 

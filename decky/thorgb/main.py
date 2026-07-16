@@ -2,7 +2,6 @@ import asyncio
 
 from thorgb.animation import AnimationLoop
 from thorgb.config import load_rgb_config, save_rgb_config
-from thorgb.effects import MODES
 from thorgb.rgb import discover_leds, probe_hardware
 
 
@@ -30,7 +29,6 @@ class Plugin:
         state = {
             "config": config,
             "supported": bool(leds),
-            "modes": list(MODES),
             "last_apply": self._animation.last_result,
         }
         if not leds:

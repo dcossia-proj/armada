@@ -125,7 +125,7 @@ export function Content() {
       <PanelSection title="Analog Stick Lighting">
         <ToggleRow
           label="Sync Both Sticks"
-          description="When on, the right stick mirrors the left stick's effect."
+          description="When on, the right stick mirrors the left stick's color."
           value={config.sync}
           onChange={(sync) => setConfig({ ...config, sync })}
         />
