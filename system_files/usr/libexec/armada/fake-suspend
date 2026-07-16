@@ -240,7 +240,11 @@ do_suspend() {
     freeze_processes
     # Radio suspend disabled until we can improve resume speed (currently takes 30+ seconds)
     # suspend_radios
-    timeout 10 /usr/bin/armada-power suspend || log "armada-power suspend timed out"
+    if ! timeout 10 /usr/bin/armada-power suspend; then
+        log "armada-power suspend failed; aborting fake suspend"
+        do_resume
+        exit 1
+    fi
     # Do this after the final GPU devfreq writes in armada-power suspend.
     suspend_runtime_pm
 }

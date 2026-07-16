@@ -44,7 +44,7 @@ Includes:
 | AYANEO Pocket S2 | SM8650 | ✅ Tested |
 | AYANEO Pocket ACE | SM8550 | ✅ Tested |
 | AYANEO Pocket DS | SM8550 | ✅ Tested |
-| AYANEO Pocket DMG | SM8550 | ⚪ Untested |
+| AYANEO Pocket DMG | SM8550 | ✅ Tested |
 | AYANEO Pocket S 2K | SM8550 | ⚪ Untested |
 
 ## Flash to SD card
@@ -201,11 +201,11 @@ settings:
 
 - **Black screen during Steam launch.** Sometimes there is a 30-60s black screen
   before Steam becomes fully visible, often following an update or restart.
+- **Compiling shaders message during gameplay.** This was a change made in a
+  recent version of CachyOS Proton 11 (ARM) that will be disabled in a future
+  Armada release.
 - **Red tint.** Some devices show a red tint on the panel after Steam
   restart. It is intermittent and a reboot clears it.
-- **FEX presets apply only to Proton launches.** Armada Control's per-game FEX
-  preset changes are applied through the bundled Proton wrapper, so they do not
-  currently affect native Linux x86 games launched directly through FEX.
 - **QAM is unmapped on Ayaneo devices.** Use Home+A to open the Quick Access Menu.
 
 ## Community
