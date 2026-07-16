@@ -1,6 +1,8 @@
 #!/usr/bin/bash
-# Watch the device's HUD-toggle button (the AYN button on the Thor) and run
-# hud-toggle on each press. Purely passive: no evdev grab, so other keys on
+# Watch the device's HUD-toggle button (the AYN button on the Thor). A tap
+# runs hud-toggle (the existing gaming-mode HUD swap); a long press runs
+# bottom-screen-toggle (blanks/unblanks the bottom OLED panel, independent of
+# gaming vs desktop mode). Purely passive: no evdev grab, so other keys on
 # the same device (volume-up shares gpio-keys) keep working. The keycode
 # also still reaches the focused client; harmless for F24-class keys.
 set -euo pipefail
@@ -17,14 +19,34 @@ for _ in $(seq 1 30); do
 done
 [[ -e $dev ]] || exit 1
 
+# Held at least this long (microseconds) counts as a long press.
+LONG_PRESS_US=600000
+down_time=""
+
 # stdbuf: evtest block-buffers when piped, which would delay presses forever.
-# Key-down lines look like:
+# Key lines look like (timestamp is seconds.microseconds, always 6 fractional
+# digits - evtest formats it with %ld.%06ld):
 #   Event: time 1783912432.241849, type 1 (EV_KEY), code 194 (KEY_F24), value 1
 stdbuf -oL evtest "$dev" \
     | while read -r line; do
           case "$line" in
               *"(${ARMADA_HUD_TOGGLE_BUTTON_KEY}), value 1")
-                  /usr/libexec/armada/hud-toggle || true
+                  down_time="${line#*time }"
+                  down_time="${down_time%%,*}"
+                  ;;
+              *"(${ARMADA_HUD_TOGGLE_BUTTON_KEY}), value 0")
+                  [[ -n $down_time ]] || continue
+                  up_time="${line#*time }"
+                  up_time="${up_time%%,*}"
+                  # 10# forces base-10 (the zero-padded microsecond half would
+                  # otherwise be parsed as an invalid octal literal).
+                  held_us=$(( 10#${up_time/./} - 10#${down_time/./} ))
+                  down_time=""
+                  if (( held_us >= LONG_PRESS_US )); then
+                      /usr/libexec/armada/bottom-screen-toggle || true
+                  else
+                      /usr/libexec/armada/hud-toggle || true
+                  fi
                   ;;
           esac
       done
