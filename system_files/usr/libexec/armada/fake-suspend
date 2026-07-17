@@ -120,6 +120,44 @@ resume_runtime_pm() {
     done < <(tac "$SAVE_DIR/power-controls")
 }
 
+# Blanking the joystick LEDs here rather than leaving it to the ThoRGB Decky
+# plugin means it doesn't depend on that plugin being alive, scheduled, or
+# correctly watching for the sleep - this runs directly, the same way
+# display_off/mute_audio do. Only brightness is saved/restored, not
+# multi_intensity (the color): the leds-group-multicolor class scales every
+# channel by the group's own brightness attribute, so brightness=0 alone
+# fully blanks it regardless of what multi_intensity holds, and since it's
+# never touched here it's still exactly what it was when brightness comes
+# back.
+LED_ROOT="/sys/devices/platform"
+
+led_paths() {
+    local d
+    for d in "${LED_ROOT}"/multi-led[lr][1-4]/leds/rgb:*; do
+        [[ -w "${d}/brightness" ]] && printf '%s\n' "$d"
+    done
+}
+
+suspend_leds() {
+    : > "$SAVE_DIR/leds"
+    local d brightness
+    while IFS= read -r d; do
+        brightness="$(cat "${d}/brightness" 2>/dev/null)" || continue
+        printf '%s\t%s\n' "$d" "$brightness" >> "$SAVE_DIR/leds"
+        echo 0 > "${d}/brightness" 2>/dev/null || true
+    done < <(led_paths)
+}
+
+resume_leds() {
+    [[ -r "$SAVE_DIR/leds" ]] || return 0
+    local d brightness
+    while IFS=$'\t' read -r d brightness; do
+        [[ -w "${d}/brightness" ]] || continue
+        echo "$brightness" > "${d}/brightness" 2>/dev/null ||
+            log "failed to restore ${d}/brightness=${brightness}"
+    done < "$SAVE_DIR/leds"
+}
+
 # The power key is left ungrabbed by block_input; wait_for_wake grabs it instead.
 INPUT_WHITELIST='pmic_pwrkey'
 
@@ -237,6 +275,7 @@ do_suspend() {
     mute_audio
     block_input
     display_off   # gamescope drm_sleep (game) / bl_power (desktop); after Steam's animation
+    suspend_leds
     freeze_processes
     # Radio suspend disabled until we can improve resume speed (currently takes 30+ seconds)
     # suspend_radios
@@ -260,6 +299,7 @@ do_resume() {
     unblock_input
     unmute_audio
     display_on
+    resume_leds
     rm -f "$STATE_FLAG"
     rm -rf "$SAVE_DIR"
 }
