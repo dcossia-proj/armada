@@ -76,6 +76,11 @@ dnf5 -y install --setopt=install_weak_deps=False \
     plasma-workspace \
     plasma-desktop \
     plasma-mobile \
+    plasma-settings \
+    maui-mauikit-index-fm \
+    kalk \
+    koko \
+    angelfish \
     plasma-pa \
     plasma-nm \
     bluedevil \
