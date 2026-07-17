@@ -73,6 +73,20 @@ logout_plasma() {
         "${qdbus}" org.kde.Shutdown /Shutdown org.kde.Shutdown.logout
 }
 
+# org.kde.Shutdown is Plasma-shell session infrastructure - proven to exist
+# under the classic desktop (switch-gamemode has used it for a while), but
+# Plasma Mobile's session is far more minimal and may not register it the
+# same way. loginctl is systemd-logind: it manages the session regardless of
+# which shell owns it, so it's a shell-agnostic fallback rather than giving
+# up and falling through to a bare sddm restart that's already known not to
+# reliably end an active Plasma session either way.
+terminate_plasma_session() {
+    local sid
+    sid=$(loginctl show-user armada --property=Sessions --value 2>/dev/null | awk '{print $1}')
+    [[ -n "${sid}" ]] || return 1
+    loginctl terminate-session "${sid}"
+}
+
 printf '[Autologin]\nSession=%s\n' "${session}" > /etc/sddm.conf.d/zz-steamos-autologin.conf
 systemctl reset-failed sddm.service 2>/dev/null || true
 
@@ -87,8 +101,9 @@ fi
 # going from one running Plasma session straight to another, not just
 # coming back from gamescope (which isn't Plasma and tears down on restart
 # on its own).
-if [[ ${1:-} == "switch-gamemode" || ${1:-} == "set-desktop-shell" ]] && logout_plasma; then
-    exit 0
+if [[ ${1:-} == "switch-gamemode" || ${1:-} == "set-desktop-shell" ]]; then
+    logout_plasma && exit 0
+    terminate_plasma_session && exit 0
 fi
 
 systemctl --no-block restart sddm.service
