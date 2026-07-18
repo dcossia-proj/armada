@@ -1,2 +1,14 @@
 #!/bin/bash
+# plasmashell --replace swaps the shell in-process, but skips everything
+# startplasmamobile normally does first to set up a real Plasma Mobile
+# session - without it the shell loads with no mobile-form-factor hints and
+# an uninitialized ~/.config/plasma-mobile, and Folio's homescreen (which
+# reads its app/page layout from there) comes up with nothing to show.
+export QT_QUICK_CONTROLS_MOBILE=true
+export PLASMA_INTEGRATION_USE_PORTAL=1
+export PLASMA_PLATFORM=phone:handset
+export XDG_CONFIG_DIRS="${HOME}/.config/plasma-mobile:/etc/xdg:${XDG_CONFIG_DIRS}"
+
+QT_QPA_PLATFORM=offscreen plasma-mobile-envmanager --apply-settings || true
+
 plasmashell --replace -p org.kde.plasma.mobileshell &
