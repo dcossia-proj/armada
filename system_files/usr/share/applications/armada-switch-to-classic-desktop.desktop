@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Switch to Classic Desktop
-Comment=Switch to the classic Plasma Desktop now and make it the default from now on
-Exec=/usr/libexec/os-session-select shell-classic
-Icon=preferences-desktop
-Terminal=false
-Categories=System;Settings;
-NoDisplay=false

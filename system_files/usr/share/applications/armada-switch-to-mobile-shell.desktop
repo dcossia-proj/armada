@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Switch to Plasma Mobile
+Comment=Live-swap the running shell to Plasma Mobile
+Icon=phone
+Exec=/usr/libexec/armada/switch-to-mobile-shell
+Terminal=false
+Categories=System;

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Switch to Plasma Desktop
+Comment=Live-swap the running shell to the classic Plasma Desktop
+Icon=user-desktop
+Exec=/usr/libexec/armada/switch-to-desktop-shell
+Terminal=false
+Categories=System;
