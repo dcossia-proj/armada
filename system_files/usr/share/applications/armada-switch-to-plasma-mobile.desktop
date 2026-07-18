@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Switch to Plasma Mobile
-Comment=Switch to Plasma Mobile now and make it the default from now on
-Exec=/usr/libexec/os-session-select shell-mobile
-Icon=preferences-desktop
-Terminal=false
-Categories=System;Settings;
-NoDisplay=false
