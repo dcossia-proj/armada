@@ -1,2 +1,7 @@
 #!/bin/bash
+# kbuildsycoca6 first: a bare `plasmashell --replace` without it is a known
+# way to land on an empty Kickoff/app grid - the app/service cache a fresh
+# session start normally rebuilds along the way never gets touched by a live
+# replace on its own.
+kbuildsycoca6 || true
 plasmashell --replace -p org.kde.plasma.desktop &
