@@ -27,7 +27,6 @@ Includes:
 | 🎮 **Dual-screen gaming** | Nested gamescope keeps the top screen's game running full speed while the bottom screen hosts the desktop shell or a second performance overlay. The AYN button taps between the two overlays; holding it blanks the bottom OLED panel to save power. |
 | 📱 **Plasma Mobile, one tap away** | Classic Plasma Desktop is the default, but two desktop icons live-swap the shell to Plasma Mobile and back instantly (`plasmashell --replace`, no logout or reboot). Filled out with Plasma Mobile's settings app, file manager, calculator, gallery, and browser so it isn't just an empty shell. |
 | 🌈 **ThoRGB joystick lighting** | A Decky plugin for per-stick color and brightness on the Thor's analog sticks. LEDs blank automatically during fake-suspend and come back exactly as they were on wake. |
-| 🐟 **Fish + Tide** | Default shell is [fish](https://fishshell.com/), with the [Tide](https://github.com/IlanCosman/tide) prompt preconfigured out of the box. |
 | 📦 **A fuller app set** | System Monitor, Partition Manager, Ark, Filelight, KWallet, KSystemLog, Spectacle, Okular, Kmail, Elisa, weather, notes, and more, plus Klassy window decorations - baked into the image so it's ready to use, not just a bare desktop. |
 
 Everything else - device support, FEX/Proton, power profiles, over-the-air
