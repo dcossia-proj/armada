@@ -91,7 +91,29 @@ dnf5 -y install --setopt=install_weak_deps=False \
     kio-extras \
     kscreen \
     konsole \
-    dolphin
+    qmlkonsole \
+    dolphin \
+    plasma-systemmonitor \
+    kwalletmanager \
+    kdf \
+    ksystemlog \
+    spectacle \
+    ark \
+    filelight \
+    kfind \
+    kweather \
+    kclock \
+    kde-partitionmanager \
+    plasmatube \
+    kcolorchooser \
+    elisa-player \
+    kmix \
+    okular \
+    zanshin \
+    kmail \
+    7zip \
+    unrar-free \
+    klassy
 
 dnf5 -y install --setopt=install_weak_deps=False \
     protonplus \
