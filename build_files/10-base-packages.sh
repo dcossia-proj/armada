@@ -72,7 +72,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     google-noto-sans-hebrew-vf-fonts \
     google-noto-sans-devanagari-vf-fonts \
     google-noto-color-emoji-fonts \
-    nerdfontssymbolsonly-nerd-fonts
+    ubuntumono-nerd-fonts
 
 dnf5 -y install --setopt=install_weak_deps=False \
     plasma-workspace \
