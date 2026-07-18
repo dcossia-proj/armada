@@ -1,2 +1,20 @@
 #!/bin/bash
+# plasmashell --replace swaps the shell in-process, but skips everything a
+# real session start normally does along the way:
+#
+# - kbuildsycoca6: a bare --replace without it is a known way to land on an
+#   empty app grid - the app/service cache a fresh session rebuilds as it
+#   starts never gets touched by a live replace on its own.
+# - startplasmamobile's own setup: mobile-form-factor env vars, and running
+#   plasma-mobile-envmanager, which is what initializes ~/.config/plasma-
+#   mobile in the first place. Folio's homescreen reads its page/app layout
+#   from that config.
+export QT_QUICK_CONTROLS_MOBILE=true
+export PLASMA_INTEGRATION_USE_PORTAL=1
+export PLASMA_PLATFORM=phone:handset
+export XDG_CONFIG_DIRS="${HOME}/.config/plasma-mobile:/etc/xdg:${XDG_CONFIG_DIRS}"
+
+QT_QPA_PLATFORM=offscreen plasma-mobile-envmanager --apply-settings || true
+kbuildsycoca6 || true
+
 plasmashell --replace -p org.kde.plasma.mobileshell &
