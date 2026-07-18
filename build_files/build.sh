@@ -9,7 +9,6 @@ cd /ctx/build_files
 ./40-vendor-system-files.sh
 ./45-install-decky-plugins.sh
 ./50-create-user.sh
-./55-install-tide-prompt.sh
 ./60-set-default-target.sh
 ./70-cleanup.sh
 ./80-finalize-update-state.sh
