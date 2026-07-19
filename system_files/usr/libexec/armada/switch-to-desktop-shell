@@ -1,2 +1,13 @@
 #!/bin/bash
+# Undo the convergentwindows KWin script switch-to-mobile-shell enables -
+# without it, every window on the classic desktop would stay forced
+# fullscreen and undecorated.
+kwriteconfig6 --file kwinrc --group Plugins --key convergentwindowsEnabled false
+for qdbus in qdbus-qt6 qdbus6 qdbus /usr/lib64/qt6/bin/qdbus; do
+    if command -v "${qdbus}" >/dev/null 2>&1; then
+        "${qdbus}" org.kde.KWin /KWin org.kde.KWin.reconfigure 2>/dev/null || true
+        break
+    fi
+done
+
 plasmashell --replace -p org.kde.plasma.desktop &

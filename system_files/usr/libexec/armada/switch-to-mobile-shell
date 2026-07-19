@@ -1,2 +1,17 @@
 #!/bin/bash
+# Without this, windows keep opening exactly as they do on the classic
+# desktop (decorated, floating, not fullscreen) - plasmashell --replace only
+# swaps the shell/panel UI, it never touches KWin, which is what actually
+# owns window placement. convergentwindows is plasma-mobile's own KWin
+# script for this ("removes window decorations and maximizes windows on the
+# first screen only"); toggling it is the same kwriteconfig6 + qdbus
+# reconfigure pattern desktop-bootstrap already uses for KWin rules.
+kwriteconfig6 --file kwinrc --group Plugins --key convergentwindowsEnabled true
+for qdbus in qdbus-qt6 qdbus6 qdbus /usr/lib64/qt6/bin/qdbus; do
+    if command -v "${qdbus}" >/dev/null 2>&1; then
+        "${qdbus}" org.kde.KWin /KWin org.kde.KWin.reconfigure 2>/dev/null || true
+        break
+    fi
+done
+
 plasmashell --replace -p org.kde.plasma.mobileshell &
