@@ -25,7 +25,7 @@ Includes:
 |---|---|
 | 🖥️ **Bottom screen, for real** | Fixed a long-standing kernel DTS regression that silently disabled the Thor's bottom DSI panel and its touch digitizer - both work now, with correct touch coordinates. |
 | 🎮 **Dual-screen gaming** | Nested gamescope keeps the top screen's game running full speed while the bottom screen hosts the desktop shell or a second performance overlay. The AYN button taps between the two overlays; holding it blanks the bottom OLED panel to save power. |
-| 📱 **Plasma Mobile, one tap away** | Classic Plasma Desktop is the default, but two desktop icons live-swap the shell to Plasma Mobile and back instantly (`plasmashell --replace`, no logout or reboot). Brought a calculator, image gallery, and browser along for it; everything else (settings, files) reuses the classic desktop's own apps rather than duplicating them. |
+| 📱 **Plasma Mobile, one tap away** | Classic Plasma Desktop is the default, but two desktop icons live-swap the shell to Plasma Mobile and back instantly (`plasmashell --replace`, no logout or reboot). Brought a calculator and image gallery along for it; everything else (browser, settings, files) reuses the classic desktop's own apps rather than duplicating them. |
 | 🌈 **ThoRGB joystick lighting** | A Decky plugin for per-stick color and brightness on the Thor's analog sticks. LEDs blank automatically during fake-suspend and come back exactly as they were on wake. |
 | 📦 **A fuller app set** | System Monitor, Partition Manager, Ark, Filelight, KWallet, KSystemLog, Spectacle, Okular, Kmail, Elisa, weather, notes, fastfetch, and more, plus Klassy window decorations - baked into the image so it's ready to use, not just a bare desktop. |
 
