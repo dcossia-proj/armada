@@ -79,7 +79,6 @@ dnf5 -y install --setopt=install_weak_deps=False \
     plasma-mobile \
     kalk \
     koko \
-    angelfish \
     plasma-pa \
     plasma-nm \
     bluedevil \
