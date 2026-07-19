@@ -22,9 +22,10 @@ install -Dpm 0755 -o armada -g armada \
 install -Dpm 0755 -o armada -g armada \
     /usr/share/applications/armada-switch-to-mobile-shell.desktop \
     /var/home/armada/Desktop/armada-switch-to-mobile-shell.desktop
-install -Dpm 0755 -o armada -g armada \
-    /usr/share/applications/armada-switch-to-desktop-shell.desktop \
-    /var/home/armada/Desktop/armada-switch-to-desktop-shell.desktop
+# Switch to Plasma Desktop deliberately isn't placed here too - it's
+# redundant on the classic desktop's own home screen (you're already there).
+# The launcher itself still exists in /usr/share/applications so it's
+# reachable/pinnable from within Plasma Mobile.
 
 echo 'armada:armada' | chpasswd
 
