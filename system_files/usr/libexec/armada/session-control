@@ -2,23 +2,21 @@
 # zz- sorts after armada.conf so its Session= wins (User=/Relogin= stay there).
 set -euo pipefail
 
-# Which Plasma shell "the desktop session" means - Plasma Mobile by default
-# (temporary, for testing whether going through its real first-boot session
-# setup - which the plasmashell --replace live-switch path skips - is what's
-# needed for the app drawer to populate), switchable to the classic Plasma
-# Desktop via `set-desktop-shell`. Both session files boot through the same
-# KDE autostart phase (desktop-bootstrap, dual-screen setup, the AYN-button/
-# nested-gaming units), so this only picks the shell on top - nothing else
-# needs to know which one is active.
+# Which Plasma shell "the desktop session" means - the classic Plasma
+# Desktop by default, switchable to Plasma Mobile via `set-desktop-shell`.
+# Both session files boot through the same KDE autostart phase (desktop-
+# bootstrap, dual-screen setup, the AYN-button/nested-gaming units), so this
+# only picks the shell on top - nothing else needs to know which one is
+# active.
 DESKTOP_SHELL_PREF=/etc/armada/desktop-shell
 
 desktop_session_file() {
     local pref
     pref=$(cat "$DESKTOP_SHELL_PREF" 2>/dev/null || true)
-    if [[ $pref == classic ]]; then
-        echo armada-plasma.desktop
-    else
+    if [[ $pref == mobile ]]; then
         echo armada-plasma-mobile.desktop
+    else
+        echo armada-plasma.desktop
     fi
 }
 

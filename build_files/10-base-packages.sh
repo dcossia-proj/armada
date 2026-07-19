@@ -31,6 +31,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
     curl \
     jq \
     htop \
+    fastfetch \
     lsof \
     unzip \
     evtest \
@@ -76,8 +77,6 @@ dnf5 -y install --setopt=install_weak_deps=False \
     plasma-workspace \
     plasma-desktop \
     plasma-mobile \
-    plasma-settings \
-    maui-mauikit-index-fm \
     kalk \
     koko \
     angelfish \
@@ -91,7 +90,6 @@ dnf5 -y install --setopt=install_weak_deps=False \
     kio-extras \
     kscreen \
     konsole \
-    qmlkonsole \
     dolphin \
     plasma-systemmonitor \
     kwalletmanager \
